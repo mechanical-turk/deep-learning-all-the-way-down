@@ -1,22 +1,5 @@
-// chapter 1: Rudimentary tensor
-
-
-// stores double values
-// stores one or more positive dimensions
-// owns one flat vector
-// reports shape, rank, and number of elements
-// rejects mismatched shape and data
-// reads values using checked multidimensional coordinates
-
-// Later:
-// scalars
-// empty tensors
-// mutations
-// operations (+, -, *)
-// generic types
-// autograd
-
 #include <cstddef>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 #include <iostream>
@@ -29,18 +12,27 @@ public:
     std::vector<std::size_t> shape,
     std::vector<double> data
   ) : shape_(std::move(shape)), data_(std::move(data)) {
-    if (shape_.empty()) {
-      throw std::invalid_argument("chapter 1 tensors must have at least one dimension");
-    }
+    std::size_t expected_elements;
 
-    std::size_t expected_elements = 1;
+    bool has_zero_dims = false;
 
     for (const std::size_t dimension: shape_) {
       if (dimension == 0) {
-        throw std::invalid_argument("chapter 1 tensor dimensions must be positive");
+        has_zero_dims = true;
+        expected_elements = 0;
+        break;
       }
-      expected_elements *= dimension;
-      // TODO: handle overflow
+    }
+
+    if (!has_zero_dims) {
+      expected_elements = 1;
+      for (const std::size_t dimension: shape_) {
+        if (expected_elements > std::numeric_limits<std::size_t>::max() / dimension) {
+          throw std::overflow_error("tensor element count overflows size_t");
+        }
+
+        expected_elements *= dimension;
+      }
     }
 
     if (expected_elements != data_.size()) {
@@ -64,9 +56,45 @@ public:
     return data_.size();
   }
 
+  [[nodiscard]] std::size_t dimension(const std::size_t axis) const {
+    if (axis >= rank()) {
+      throw std::out_of_range("tensor axis is outside its rank");
+    }
+    return shape_[axis];
+  }
+
+  double& at(const std::vector<std::size_t>& idx) {
+    return data_[flat_index(idx)];
+  }
+
   [[nodiscard]] double at(const std::vector<std::size_t>& idx) const {
+    return data_[flat_index(idx)];
+  }
+
+  [[nodiscard]] double sum() const noexcept {
+    // ^ TODO: return tensor
+
+    double result = 0.0;
+    for (const double value: data_) {
+      result += value;
+    }
+
+    return result;
+  }
+
+private:
+  std::vector<std::size_t> shape_;
+  std::vector<double> data_;
+
+  [[nodiscard]] std::size_t flat_index(const std::vector<std::size_t>& idx) const {
     if (idx.size() != rank()) {
       throw std::invalid_argument("number of indices must match tensor rank");
+    }
+
+    for (std::size_t axis = 0; axis < rank(); ++axis) {
+      if (idx[axis] >= shape_[axis]) {
+        throw std::out_of_range("tensor index is outside its dimension");
+      }
     }
 
     std::size_t flat_index = 0;
@@ -74,22 +102,12 @@ public:
 
     for (std::size_t axis = rank(); axis > 0; --axis) {
       const std::size_t current_axis = axis - 1;
-
-      if (idx[current_axis] >= shape_[current_axis]) {
-        throw std::out_of_range("tensor index is outside its dimension");
-      }
-
       flat_index += idx[current_axis] * stride;
       stride *= shape_[current_axis];
-      // TODO: handle overflow
     }
 
-    return data_[flat_index];
+    return flat_index;
   }
-
-private:
-  std::vector<std::size_t> shape_;
-  std::vector<double> data_;
 
 };
 
@@ -126,20 +144,20 @@ int main() {
   try {
     Tensor({}, {});
   } catch (std::invalid_argument& error) {
-    assert(std::string(error.what()) == "chapter 1 tensors must have at least one dimension");
+    assert(std::string(error.what()) == "tensor shape does not match its data");
     test_5_threw = true;
   }
   assert(test_5_threw);
+  Tensor scalar({}, {5});
+  assert(scalar.rank() == 0);
+  assert(scalar.numel() == 1);
+  assert(scalar.shape() == std::vector<std::size_t>{});
 
   std::cout << "Test 6\n";
-  bool test_6_threw = false;
-  try {
-    Tensor({1, 0}, {});
-  } catch (std::invalid_argument& error) {
-    assert(std::string(error.what()) == "chapter 1 tensor dimensions must be positive");
-    test_6_threw = true;
-  }
-  assert(test_6_threw);
+  Tensor empty_matrix({1, 0}, {});
+  assert(empty_matrix.rank() == 2);
+  assert(empty_matrix.numel() == 0);
+  assert((empty_matrix.shape() == std::vector<std::size_t>{1, 0}));
 
   std::cout << "Test 7\n";
   bool test_7_threw = false;
@@ -175,6 +193,56 @@ int main() {
   }
   assert(test_10_threw);
 
+  std::cout << "Test 11\n";
+  bool test_11_threw = false;
+  try {
+    Tensor overflow({std::numeric_limits<std::size_t>::max(), 2}, {});
+  } catch (std::overflow_error& error) {
+    assert(std::string(error.what()) == "tensor element count overflows size_t");
+    test_11_threw = true;
+  }
+  assert(test_11_threw);
+
+  std::cout << "Test 12\n";
+  Tensor zero_and_max({std::numeric_limits<std::size_t>::max(), 0}, {});
+  assert(zero_and_max.rank() == 2);
+  assert(zero_and_max.numel() == 0);
+
+  std::cout << "Test 13\n";
+  Tensor zero_and_max_3d({std::numeric_limits<std::size_t>::max(), 2, 0}, {});
+  assert(zero_and_max_3d.rank() == 3);
+  assert(zero_and_max_3d.numel() == 0);
+
+  std::cout << "Test 14\n";
+  Tensor dim_test_tensor({2, 0, 3}, {});
+  assert(dim_test_tensor.dimension(0) == 2);
+  assert(dim_test_tensor.dimension(1) == 0);
+  assert(dim_test_tensor.dimension(2) == 3);
+
+  bool rejected_axis = false;
+  try {
+    auto d = dim_test_tensor.dimension(3);
+  } catch(const std::out_of_range&) {
+    rejected_axis = true;
+  }
+  assert(rejected_axis);
+
+  std::cout << "Test 15\n";
+  Tensor mutation_tensor({2,3}, {0,1,2,3,4,5});
+  assert(mutation_tensor.at({0, 0}) == 0);
+  mutation_tensor.at({0, 0}) = 5;
+  assert(mutation_tensor.at({0, 0}) == 5);
+
+  std::cout << "Test 16\n";
+  Tensor scalar_16({}, {10});
+  assert(10 == scalar_16.at({}));
+
+  std::cout << "Test 17\n";
+  assert((Tensor({2, 3}, {1,2,3,4,5,6}).sum() == 21.0));
+  assert((Tensor({}, {7.0}).sum() == 7.0));
+  assert((Tensor({1}, {7.0}).sum() == 7.0));
+  assert((Tensor({0}, {}).sum() == 0.0));
+  assert((Tensor({2, 0, 3}, {}).sum() == 0.0));
 
   std::cout << "Success!\n";
   return 0;
