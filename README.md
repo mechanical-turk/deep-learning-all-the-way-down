@@ -2,7 +2,9 @@
 
 A code-first journey through deep learning, from tensor storage to custom GPU kernels, built from first principles in modern C++.
 
-This repository contains the code developed throughout the video series:
+This repository contains the evolving implementation developed throughout the
+video series. Each episode extends the same small tensor rather than replacing
+it with a separate finished library:
 
 [Watch Deep Learning, All the Way Down on YouTube](https://www.youtube.com/playlist?list=PLZSg76FHvdTw)
 
@@ -41,7 +43,9 @@ We will work progressively through:
 
 Each chapter builds on foundations established by the chapters before it.
 
-## Chapter 1: Building a Tensor from Scratch
+## Episodes
+
+### Episode 1: Building a Tensor from Scratch
 
 The first chapter begins with a deliberately small tensor implementation in a single C++ file.
 
@@ -56,7 +60,7 @@ It introduces:
 - Row-major index calculation
 - Basic validation using assertions and exceptions
 
-The implementation intentionally supports only:
+The first version intentionally supported only:
 
 - `double` values
 - Tensors with at least one dimension
@@ -64,25 +68,43 @@ The implementation intentionally supports only:
 - Owned, contiguous, row-major storage
 - Read-only element access
 
-Features such as scalar tensors, empty tensors, mutation, generic numeric types, tensor operations, views, and autograd are deferred to later chapters.
+Features such as scalar tensors, empty tensors, mutation, reductions, tensor
+operations, views, and autograd were deferred so the foundational representation
+could remain visible.
 
-[View the Chapter 1 implementation](./main.cpp)
+[Watch Episode 1](https://www.youtube.com/watch?v=DmU2b64tWfA)
 
-## Build and run
+### Episode 2: Completing Our Tensor in C++
 
-Chapter 1 is intentionally self-contained. It requires only a C++23 compiler.
+Episode 2 expands that initial representation with:
+
+- Rank-zero scalar tensors
+- Empty tensors and zero-length dimensions
+- Overflow-safe element counting and indexing
+- Checked dimension queries
+- Mutable and const element access
+- Full-tensor summation as the first reduction
+
+The current [`main.cpp`](./main.cpp) contains the implementation as it exists
+after Episode 2, together with its assertion-based verification. Earlier episode
+states remain available through the repository's Git history.
+
+## Build and run the current implementation
+
+The implementation remains self-contained in one file and requires only a C++23
+compiler.
 
 Using Clang:
 
 ```bash
-clang++ -std=c++23 -Wall -Wextra -Wpedantic main.cpp -o main
+clang++ -std=c++23 main.cpp -o main
 ./main
 ```
 
 Using GCC:
 
 ```bash
-g++ -std=c++23 -Wall -Wextra -Wpedantic main.cpp -o main
+g++ -std=c++23 main.cpp -o main
 ./main
 ```
 
