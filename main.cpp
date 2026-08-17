@@ -71,20 +71,80 @@ public:
     return data_[flat_index(idx)];
   }
 
-  [[nodiscard]] double sum() const noexcept {
-    // ^ TODO: return tensor
-
+  [[nodiscard]] Tensor sum() const {
     double result = 0.0;
     for (const double value: data_) {
       result += value;
     }
 
-    return result;
+    return Tensor({}, {result});
   }
+
+  [[nodiscard]] Tensor dot(const Tensor& other) const {
+    if (rank() != 1 || other.rank() != 1) {
+      throw std::invalid_argument("dot requires two rank-one tensors");
+    }
+
+    if (shape_ != other.shape_) {
+      throw std::invalid_argument("dot requires vectors of equal length");
+    }
+
+    // TODO: (performance): Benchmark a fused dot-product kernel that avoids
+    // allocating and traversing an intermediate product tensor.
+
+    return (*this * other).sum();
+  }
+
+  [[nodiscard]] Tensor operator+(const Tensor& other) const {
+    return elementwise_binary(
+      other,
+      [](const double left, const double right) {
+        return left + right;
+      }
+    );
+  }
+
+  [[nodiscard]] Tensor operator-(const Tensor& other) const {
+    return elementwise_binary(
+      other,
+      [](const double left, const double right) {
+        return left - right;
+      }
+    );
+  }
+
+  [[nodiscard]] Tensor operator*(const Tensor& other) const {
+    return elementwise_binary(
+      other,
+      [](const double left, const double right) {
+        return left * right;
+      }
+    );
+  }
+
+
 
 private:
   std::vector<std::size_t> shape_;
   std::vector<double> data_;
+
+  [[nodiscard]] Tensor elementwise_binary(
+    const Tensor& other,
+    const auto& operation
+  ) const {
+    if (shape_ != other.shape_) {
+      throw std::invalid_argument("elementwise operations require equal shapes");
+    }
+
+    std::vector<double> result_data;
+    result_data.reserve(numel());
+
+    for (std::size_t index = 0; index < numel(); ++index) {
+      result_data.push_back(operation(data_[index], other.data_[index]));
+    }
+
+    return Tensor(shape_, std::move(result_data));
+  }
 
   [[nodiscard]] std::size_t flat_index(const std::vector<std::size_t>& idx) const {
     if (idx.size() != rank()) {
@@ -238,11 +298,103 @@ int main() {
   assert(10 == scalar_16.at({}));
 
   std::cout << "Test 17\n";
-  assert((Tensor({2, 3}, {1,2,3,4,5,6}).sum() == 21.0));
-  assert((Tensor({}, {7.0}).sum() == 7.0));
-  assert((Tensor({1}, {7.0}).sum() == 7.0));
-  assert((Tensor({0}, {}).sum() == 0.0));
-  assert((Tensor({2, 0, 3}, {}).sum() == 0.0));
+  assert((Tensor({2, 3}, {1,2,3,4,5,6}).sum().at({}) == 21.0));
+  assert((Tensor({}, {7.0}).sum().at({}) == 7.0));
+  assert((Tensor({1}, {7.0}).sum().at({}) == 7.0));
+  assert((Tensor({0}, {}).sum().at({}) == 0.0));
+  assert((Tensor({2, 0, 3}, {}).sum().at({}) == 0.0));
+
+  std::cout << "Test 18\n";
+  const Tensor left({3}, {1.0, 2.0, 3.0});
+  const Tensor right({3}, {10.0, 20.0, 30.0});
+
+  const Tensor added = left + right;
+  assert((added.shape() == std::vector<std::size_t>{3}));
+  assert((added.data() == std::vector<double>{11.0, 22.0, 33.0}));
+  assert((left.data() == std::vector<double>{1.0, 2.0, 3.0}));
+  assert((right.data() == std::vector<double>{10.0, 20.0, 30.0}));
+
+  const Tensor scalar_sum = Tensor({}, {2.0}) + Tensor({}, {3.0});
+  assert(scalar_sum.rank() == 0);
+  assert(scalar_sum.at({}) == 5.0);
+
+  const Tensor empty_sum = Tensor({0}, {}) + Tensor({0}, {});
+  assert((empty_sum.shape() == std::vector<std::size_t>{0}));
+  assert(empty_sum.numel() == 0);
+
+  std::cout << "Test 19\n";
+
+  bool rejected_mismatched_shapes = false;
+
+  try {
+    const auto invalid = Tensor({2}, {1.0, 2.0}) + Tensor({1, 2}, {3.0, 4.0});
+  } catch (const std::invalid_argument&) {
+    rejected_mismatched_shapes = true;
+  }
+  assert(rejected_mismatched_shapes);
+
+  std::cout << "Test 20\n";
+
+  const Tensor arithmetic_left({3}, {2.0, 3.0, 4.0});
+  const Tensor arithmetic_right({3}, {5.0, 6.0, 7.0});
+
+  const Tensor arithmetic_sum = arithmetic_left + arithmetic_right;
+  const Tensor arithmetic_sub = arithmetic_left - arithmetic_right;
+  const Tensor arithmetic_prod = arithmetic_left * arithmetic_right;
+
+  assert((arithmetic_sum.data() == std::vector<double>{7.0, 9.0, 11.0}));
+  assert((arithmetic_sub.data() == std::vector<double>{-3.0, -3.0, -3.0}));
+  assert((arithmetic_prod.data() == std::vector<double>{10.0, 18.0, 28.0}));
+
+  std::cout << "Test 21\n";
+
+  const Tensor dot_result = Tensor({3}, {2.0, 3.0, 4.0}).dot(Tensor({3}, {5.0, 6.0, 7.0}));
+
+  assert(dot_result.rank() == 0);
+  assert(dot_result.at({}) == 56.0);
+
+  const Tensor empty_dot = Tensor({0}, {}).dot(Tensor({0}, {}));
+  assert(empty_dot.rank() == 0);
+  assert(empty_dot.at({}) == 0);
+
+  bool rejected_matrix_dot = false;
+
+  try {
+    const auto invalid = Tensor({1, 2}, {1.0, 2.0}).dot(Tensor({1, 2}, {3.0, 4.0}));
+  } catch (const std::invalid_argument&) {
+    rejected_matrix_dot = true;
+  }
+  assert(rejected_matrix_dot);
+
+  bool rejected_unequal_lengths = false;
+
+  try {
+    const auto invalid = Tensor({2}, {1.0, 2.0}).dot(Tensor({3}, {3.0, 4.0, 5.0}));
+  } catch (const std::invalid_argument&) {
+    rejected_unequal_lengths = true;
+  }
+  assert(rejected_unequal_lengths);
+
+
+  // features = [ 4.0, 3.0, 2.0]
+  // weights  = [0.5,  -1.0, 2.0]
+  // scaled   = [2.0,  -3.0, 4.0]
+  // weighted_sum = 3.0
+  // bias = 0.5
+  // prediction = 3.0 + 0.5 = 3.5
+  // pred = weights.dot(features) + bias
+
+  std::cout << "Test 22\n";
+
+  const Tensor features({3}, {4.0, 3.0, 2.0});
+
+  const Tensor weights({3}, {0.5, -1.0, 2.0});
+  const Tensor bias({}, {0.5});
+
+  const Tensor prediction = weights.dot(features) + bias;
+  assert(prediction.rank() == 0);
+  assert(prediction.at({}) == 3.5);
+
 
   std::cout << "Success!\n";
   return 0;
