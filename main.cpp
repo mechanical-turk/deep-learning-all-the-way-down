@@ -122,6 +122,48 @@ public:
     );
   }
 
+  [[nodiscard]] Tensor matmul(const Tensor& other) const {
+    if (rank() != 2 || other.rank() != 2) {
+      throw std::invalid_argument("matmul requires two rank-two tensors");
+    }
+
+    const std::size_t left_rows = shape_[0];
+    const std::size_t left_cols = shape_[1];
+    const std::size_t right_rows = other.shape_[0];
+    const std::size_t right_cols = other.shape_[1];
+
+    if (left_cols != right_rows) {
+      throw std::invalid_argument("matmul inner dimensions must match");
+    }
+
+    const std::vector<std::size_t> result_shape{
+      left_rows,
+      right_cols
+    };
+
+    std::vector<double> result_data(
+      left_rows * right_cols,
+      0.0
+    );
+
+    for (std::size_t row = 0; row < left_rows; ++row) {
+      for (std::size_t col = 0; col < right_cols; ++col) {
+        double sum = 0.0;
+        for (std::size_t index = 0; index < left_cols; ++index) {
+          sum += 
+            data_[row * left_cols + index] * 
+            other.data_[index * right_cols + col];
+        }
+        result_data[row * right_cols + col] = sum;
+      }
+    }
+
+    return Tensor(
+      std::move(result_shape),
+      std::move(result_data)
+    );
+
+  }
 
 
 private:
@@ -388,12 +430,65 @@ int main() {
 
   const Tensor features({3}, {4.0, 3.0, 2.0});
 
-  const Tensor weights({3}, {0.5, -1.0, 2.0});
+  const Tensor weights_({3}, {0.5, -1.0, 2.0});
   const Tensor bias({}, {0.5});
 
-  const Tensor prediction = weights.dot(features) + bias;
+  const Tensor prediction = weights_.dot(features) + bias;
   assert(prediction.rank() == 0);
   assert(prediction.at({}) == 3.5);
+
+  
+
+
+  
+  // 2 observations
+  // 3 features 
+
+  // 2x3 matrix
+
+  const Tensor inputs(
+    {2, 3},
+    {
+      4.0, 3.0, 2.0,
+      1.0, 2.0, 0.5
+    }
+  );
+
+  const Tensor weights(
+    {3, 1},
+    {
+      0.5,
+      -1.0,
+      2.0
+    }
+  );
+
+  // 3.0
+  // -0.5
+
+  std::cout << "Test 23\n";
+  const Tensor matmul_23 = inputs.matmul(weights);
+
+  assert((
+    matmul_23.shape() == std::vector<std::size_t>{2, 1}
+  ));
+
+  assert((
+    matmul_23.data() == std::vector<double>{3.0, -0.5}
+  ));
+
+  const Tensor expanded_bias(
+    {2,1},
+    {
+      0.5,
+      0.5
+    }
+  );
+  const Tensor pred_23 = matmul_23 + expanded_bias;
+
+  // broadcasting.
+
+
 
 
   std::cout << "Success!\n";
