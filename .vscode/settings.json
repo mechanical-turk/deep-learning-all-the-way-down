@@ -1,0 +1,50 @@
+{
+  "workbench.colorTheme": "Default High Contrast",
+
+  // Presentation-friendly code: readable at typical screen-recording sizes.
+  "editor.fontSize": 21,
+  "editor.lineHeight": 28,
+  "editor.fontLigatures": true,
+  "terminal.integrated.fontSize": 21,
+  "terminal.integrated.lineHeight": 1.33,
+  "editor.wordWrap": "wordWrapColumn",
+  "editor.wordWrapColumn": 90,
+  "editor.rulers": [],
+  "editor.scrollBeyondLastLine": false,
+  "editor.smoothScrolling": false,
+  "editor.inertialScroll": false,
+
+  // Keep the lower-right corner clear for a recorder-managed webcam overlay.
+  "editor.minimap.enabled": false,
+  "editor.overviewRulerLanes": 0,
+  "editor.overviewRulerBorder": false,
+  "editor.hideCursorInOverviewRuler": true,
+  "scm.diffDecorations": "none",
+  "workbench.statusBar.visible": false,
+  "todohighlight.keywords": [
+    {
+      "text": "TODO:",
+      "color": "#fff",
+      "backgroundColor": "#ffbd2a",
+      "overviewRulerColor": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "text": "FIXME:",
+      "color": "#fff",
+      "backgroundColor": "#f06292",
+      "overviewRulerColor": "rgba(0, 0, 0, 0)"
+    }
+  ],
+
+  // Reduce incidental UI noise while explaining code on camera.
+  "breadcrumbs.enabled": false,
+  "editor.stickyScroll.enabled": false,
+  "editor.codeLens": false,
+  "editor.inlayHints.enabled": "offUnlessPressed",
+  "editor.renderWhitespace": "selection",
+  "editor.guides.indentation": false,
+  "workbench.editor.showTabs": "single",
+  "zenMode.hideLineNumbers": false,
+  "zenMode.centerLayout": false,
+  "gitlens.currentLine.enabled": false
+}
