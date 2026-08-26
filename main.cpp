@@ -82,6 +82,16 @@ public:
     return Tensor({}, {result});
   }
 
+  [[nodiscard]] Tensor mean() const {
+    if (numel() == 0) {
+      throw std::invalid_argument(
+        "mean is undefined for an empty tensor"
+      );
+    }
+
+    return sum() / Tensor({}, {static_cast<double>(numel())});
+  }
+
   [[nodiscard]] Tensor dot(const Tensor& other) const {
     if (rank() != 1 || other.rank() != 1) {
       throw std::invalid_argument("dot requires two rank-one tensors");
@@ -120,6 +130,15 @@ public:
       other,
       [](const double left, const double right) {
         return left * right;
+      }
+    );
+  }
+
+  [[nodiscard]] Tensor operator/(const Tensor& other) const {
+    return elementwise_binary(
+      other,
+      [](const double left, const double right) {
+        return left / right;
       }
     );
   }
@@ -328,6 +347,18 @@ private:
   }
 
 };
+
+[[nodiscard]] Tensor mse_loss(
+  const Tensor& prediction,
+  const Tensor& target
+) {
+  if (prediction.shape() != target.shape()) {
+    throw std::invalid_argument("mse loss requires equal shapes");
+  }
+
+  Tensor residual = prediction - target;
+  return (residual * residual).mean();
+}
 
 int main() {
 
@@ -598,6 +629,46 @@ int main() {
     pred_23.data() == std::vector<double>{3.5, 0.0}
   ));
 
+  const Tensor targets(
+    {2,1},
+    {
+      2.5,
+      1.0
+    }
+  );
+
+  const Tensor residuals = pred_23 - targets;
+  assert((residuals.data() == std::vector<double>{1.0, -1.0}));
+
+  const Tensor residuals_total = residuals.sum(); // 1.0 - 1.0 = 0.0
+
+  const Tensor squared_residuals = residuals * residuals;
+  assert((squared_residuals.data() == std::vector<double>{1.0, 1.0}));
+
+  const Tensor total_squared_error = squared_residuals.sum();
+  assert(total_squared_error.sum().at({}) == 2);
+
+  const Tensor mean_squared_error = squared_residuals.mean();
+  assert(mean_squared_error.rank() == 0);
+  assert(mean_squared_error.sum().at({}) == 1.0);
+
+  std::cout << "Test 24\n";
+  const Tensor loss = mse_loss(pred_23, targets);
+  assert(loss.rank() == 0);
+  assert(loss.at({}) == 1.0);
+
+  const Tensor perfect_loss = mse_loss(pred_23, pred_23);
+  assert(perfect_loss.at({}) == 0.0);
+
+  bool rejected_empty_mean = false;
+  try {
+    static_cast<void>(Tensor({0}, {}).mean());
+  } catch (std::invalid_argument&) {
+    rejected_empty_mean = true;
+  }
+  assert(rejected_empty_mean);
+
+
 
 
 
@@ -605,3 +676,6 @@ int main() {
   std::cout << "Success!\n";
   return 0;
 }
+
+
+

@@ -1,5 +1,10 @@
 {
-  "workbench.colorTheme": "Default High Contrast",
+  "workbench.colorTheme": "Dark+",
+  "workbench.colorCustomizations": {
+    "editor.background": "#0D0D0D",
+    "editorGutter.background": "#0D0D0D",
+    "terminal.background": "#0D0D0D"
+  },
 
   // Presentation-friendly code: readable at typical screen-recording sizes.
   "editor.fontSize": 21,
@@ -13,6 +18,7 @@
   "editor.scrollBeyondLastLine": false,
   "editor.smoothScrolling": false,
   "editor.inertialScroll": false,
+  "editor.fontWeight": "500",
 
   // Keep the lower-right corner clear for a recorder-managed webcam overlay.
   "editor.minimap.enabled": false,
@@ -43,8 +49,9 @@
   "editor.inlayHints.enabled": "offUnlessPressed",
   "editor.renderWhitespace": "selection",
   "editor.guides.indentation": false,
-  "workbench.editor.showTabs": "single",
+  "workbench.editor.showTabs": "multiple",
   "zenMode.hideLineNumbers": false,
+  "zenMode.showTabs": "single",
   "zenMode.centerLayout": false,
   "gitlens.currentLine.enabled": false
 }
