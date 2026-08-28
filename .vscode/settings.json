@@ -1,21 +1,20 @@
 {
-  "workbench.colorTheme": "Dark+",
   "workbench.colorCustomizations": {
-    "editor.background": "#0D0D0D",
-    "editorGutter.background": "#0D0D0D",
-    "terminal.background": "#0D0D0D"
+    "editorOverviewRuler.selectionHighlightForeground": "#00000000",
+    "editorOverviewRuler.wordHighlightForeground": "#00000000",
+    "editorOverviewRuler.wordHighlightStrongForeground": "#00000000"
   },
 
   // Presentation-friendly code: readable at typical screen-recording sizes.
-  "editor.fontSize": 21,
+  "editor.fontSize": 22,
   "editor.lineHeight": 28,
   "editor.fontLigatures": true,
   "terminal.integrated.fontSize": 21,
   "terminal.integrated.lineHeight": 1.33,
   "editor.wordWrap": "wordWrapColumn",
-  "editor.wordWrapColumn": 90,
-  "editor.rulers": [],
-  "editor.scrollBeyondLastLine": false,
+  "editor.wordWrapColumn": 82,
+  // "editor.rulers": [82],
+  "editor.scrollBeyondLastLine": true,
   "editor.smoothScrolling": false,
   "editor.inertialScroll": false,
   "editor.fontWeight": "500",
@@ -46,6 +45,7 @@
   "breadcrumbs.enabled": false,
   "editor.stickyScroll.enabled": false,
   "editor.codeLens": false,
+  "editor.lightbulb.enabled": "off",
   "editor.inlayHints.enabled": "offUnlessPressed",
   "editor.renderWhitespace": "selection",
   "editor.guides.indentation": false,
