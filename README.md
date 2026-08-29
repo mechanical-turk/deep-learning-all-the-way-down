@@ -1,144 +1,157 @@
 # Deep Learning, All the Way Down
 
-A code-first journey through deep learning, from tensor storage to custom GPU kernels, built from first principles in modern C++.
+Build the foundations of deep learning from first principles in modern C++.
 
-This repository contains the evolving implementation developed throughout the
-video series. Each episode extends the same small tensor rather than replacing
-it with a separate finished library:
+This repository contains the code developed throughout the video series, from
+tensor storage and automatic differentiation to neural networks, performance
+engineering, GPU programming, and custom CUDA kernels.
 
-[Watch Deep Learning, All the Way Down on YouTube](https://www.youtube.com/playlist?list=PLZSg76FHvdTw)
+[Watch the complete series on YouTube](https://www.youtube.com/playlist?list=PLZSg76FHvdTw)
 
-## Why this series exists
+## Why build this
 
-Deep learning libraries make sophisticated models remarkably easy to build. That convenience can also hide the machinery underneath:
+Deep learning frameworks make sophisticated systems easy to assemble, but their
+abstractions can hide the machinery underneath. This project makes that
+machinery visible by implementing it one piece at a time:
 
-- How does a tensor represent multidimensional data?
-- How are operations evaluated across shapes?
-- How does automatic differentiation construct and traverse a computation graph?
-- How do gradients become parameter updates?
-- How are neural networks assembled from these foundations?
-- What changes when computation moves from the CPU to the GPU?
-- How are custom CUDA kernels designed, measured, and optimized?
+- tensor shape, storage, and indexing;
+- elementwise operations, reductions, and broadcasting;
+- matrix multiplication and loss functions;
+- computation graphs and reverse-mode automatic differentiation;
+- training loops, neural network layers, and optimizers;
+- CPU performance, GPU programming, and CUDA kernels.
 
-This series answers those questions by building the machinery ourselves.
+This is an educational implementation, not a production framework or an
+attempt to replace PyTorch. The goal is to understand the mathematics, data
+structures, ownership decisions, and hardware behavior that mature frameworks
+bring together.
 
-By the end, we will end up with something that resembles a PyTorch clone. The goal is to develop a rigorous understanding of the mathematical, numerical, and systems concepts that libraries like PyTorch bring together.
+## Current checkpoint
 
-## The journey
+The repository currently matches the end of Episode 7.
 
-We will work progressively through:
+[`main.cpp`](./main.cpp) contains the tensor implementation developed through
+Episode 6. It currently supports:
 
-1. Tensor representation and indexing
-2. Numeric types and generic tensor storage
-3. Tensor operations and broadcasting
-4. Views, strides, and memory layouts
-5. Automatic differentiation
-6. Optimization and training loops
-7. Neural network layers
-8. Attention and transformers
-9. Language models
-10. GPU programming with CUDA
-11. Custom GPU kernels
-12. Profiling and performance optimization
+- owned `double` storage with explicit shape metadata;
+- rank-zero scalars and empty tensors;
+- overflow-safe element counting and checked multidimensional indexing;
+- mutable and const element access;
+- `sum()` and `mean()` reductions;
+- elementwise addition, subtraction, multiplication, and division;
+- vector dot products;
+- rank-two matrix multiplication;
+- NumPy-style broadcasting through effective zero strides;
+- mean squared error.
 
-Each chapter builds on foundations established by the chapters before it.
+[`scalar_autograd.cpp`](./scalar_autograd.cpp) contains the scalar reverse-mode
+automatic differentiation engine introduced in Episode 7. It adds:
 
-## Episodes
+- graph nodes that preserve values, operations, and parent relationships;
+- lightweight `Value` handles backed by shared graph nodes;
+- arithmetic operators that construct the computation graph;
+- topological traversal of shared graphs;
+- reverse-order gradient propagation;
+- local derivative rules and gradient accumulation;
+- a complete backward pass from scalar loss to weights and bias.
 
-### Episode 1: Building a Tensor from Scratch
+Scalar autograd is deliberately separate from `Tensor` for now. Connecting the
+two is the next major implementation milestone.
 
-The first chapter begins with a deliberately small tensor implementation in a single C++ file.
+## Episodes and code checkpoints
 
-It introduces:
+Every episode ends with a Git commit that preserves the exact code checkpoint
+reached on screen. Earlier states remain available through the repository
+history.
 
-- Flat tensor storage
-- Shapes and dimensions
-- Rank
-- Number of elements
-- Representation invariants
-- Checked multidimensional indexing
-- Row-major index calculation
-- Basic validation using assertions and exceptions
+| Episode | What it adds | Checkpoint | Video |
+| --- | --- | --- | --- |
+| 1 | Tensor storage, shape, rank, invariants, and checked indexing | [`bedb564`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/bedb564) | [Watch](https://www.youtube.com/watch?v=DmU2b64tWfA) |
+| 2 | Scalars, empty tensors, overflow checks, mutation, and `sum()` | [`b25de0c`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/b25de0c) | [Watch](https://www.youtube.com/watch?v=8kzL5NdxGCo) |
+| 3 | Elementwise operations, dot product, and a linear prediction | [`c4d4509`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/c4d4509) | [Watch](https://www.youtube.com/watch?v=R_NZJ_rcX7E) |
+| 4 | Rank-two matrix multiplication | [`022c750`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/022c750) | [Watch](https://www.youtube.com/watch?v=ZC6F284rRGo) |
+| 5 | General tensor broadcasting with effective strides | [`79461fb`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/79461fb) | [Watch](https://www.youtube.com/watch?v=70mVVGNc0Ik) |
+| 6 | Mean reduction, division, and mean squared error | [`92aa868`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/92aa868) | [Watch](https://www.youtube.com/watch?v=26Eg8tpM6_Q) |
+| 7 | Scalar computation graphs and reverse-mode autograd | [`e692363`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e692363) | [Watch](https://www.youtube.com/watch?v=QEZvHrZDSdw) |
 
-The first version intentionally supported only:
+## Build and run
 
-- `double` values
-- Tensors with at least one dimension
-- Positive dimension sizes
-- Owned, contiguous, row-major storage
-- Read-only element access
-
-Features such as scalar tensors, empty tensors, mutation, reductions, tensor
-operations, views, and autograd were deferred so the foundational representation
-could remain visible.
-
-[Watch Episode 1](https://www.youtube.com/watch?v=DmU2b64tWfA)
-
-### Episode 2: Completing Our Tensor in C++
-
-Episode 2 expands that initial representation with:
-
-- Rank-zero scalar tensors
-- Empty tensors and zero-length dimensions
-- Overflow-safe element counting and indexing
-- Checked dimension queries
-- Mutable and const element access
-- Full-tensor summation as the first reduction
-
-The current [`main.cpp`](./main.cpp) contains the implementation as it exists
-after Episode 2, together with its assertion-based verification. Earlier episode
-states remain available through the repository's Git history.
-
-## Build and run the current implementation
-
-The implementation remains self-contained in one file and requires only a C++23
-compiler.
+The current programs are self-contained, use C++23, and depend only on the C++
+standard library.
 
 Using Clang:
 
-```bash
+```sh
 clang++ -std=c++23 main.cpp -o main
 ./main
+
+clang++ -std=c++23 scalar_autograd.cpp -o scalar_main
+./scalar_main
 ```
 
 Using GCC:
 
-```bash
+```sh
 g++ -std=c++23 main.cpp -o main
 ./main
+
+g++ -std=c++23 scalar_autograd.cpp -o scalar_main
+./scalar_main
 ```
 
-A successful run ends with:
+Both programs verify their behavior with assertions. A successful run ends
+with:
 
 ```text
 Success!
 ```
 
-No build system or external dependencies are required.
+## Explore an earlier episode
 
-## Design philosophy
+Check out any episode's commit to inspect or run the implementation exactly as
+it existed at that checkpoint:
 
-This project favors understanding over convenience.
+```sh
+git switch --detach bedb564
+clang++ -std=c++23 main.cpp -o main
+./main
+```
 
-We will begin with small, transparent implementations before introducing more powerful abstractions. As the code becomes more capable, we will examine why each new abstraction is needed, what problem it solves, and what tradeoffs it introduces.
+Return to the latest checkpoint with:
 
-The project will emphasize:
+```sh
+git switch main
+```
 
-- Mathematical derivation
-- Explicit invariants
-- Modern C++ design
-- Correctness testing
-- Numerical behavior
-- Memory representation
-- Performance measurement
-- CPU and GPU architecture
+## Repository layout
 
-Some early implementations will eventually be redesigned or replaced. That progression is part of the material.
+```text
+.
+├── main.cpp             # cumulative Tensor implementation
+├── scalar_autograd.cpp  # scalar reverse-mode autograd
+├── .clang-format        # formatting rules used in the series
+├── .clangd              # clangd configuration
+└── .vscode              # editor settings used while recording
+```
 
-## Follow the series
+The code remains intentionally compact while the foundations are still being
+established. The structure will evolve when the implementation reaches the
+point where separating interfaces, implementations, tests, and benchmarks
+improves understanding rather than hiding it.
 
-Watch the complete playlist:
+## Direction
 
-[Deep Learning, All the Way Down](https://www.youtube.com/playlist?list=PLZSg76FHvdTw)
+The next stages will connect automatic differentiation to tensors and use it to
+train small models. From there, the project will build toward neural network
+layers, optimizers, attention, transformers, systems profiling, GPU execution,
+and custom CUDA kernels.
 
-New chapters will continue expanding the implementation from a rudimentary tensor into a working deep learning system.
+The implementation will be redesigned whenever a new capability exposes a
+weakness in the current representation. Those redesigns are part of the
+material.
+
+## Feedback
+
+Technical feedback is welcome, especially around correctness, C++ API design,
+ownership, numerical behavior, and performance. Open a GitHub issue with a
+small example when possible.
