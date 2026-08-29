@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./assets/deep-learning-all-the-way-down-banner.png" alt="Deep Learning, All the Way Down: deep learning from first principles in modern C++">
+</p>
+
 # Deep Learning, All the Way Down
 
 Build the foundations of deep learning from first principles in modern C++.
