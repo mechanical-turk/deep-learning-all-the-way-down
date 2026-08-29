@@ -134,6 +134,86 @@ automatic differentiation engine introduced in Episode 7. It supports:
 Scalar autograd remains separate from `Tensor`. The next step will connect the
 two.
 
+## Episode summaries
+
+### Episode 1: Build a tensor from scratch in C++
+
+The series begins with a small `Tensor` class in one C++23 file. We store values
+in a flat, row-major `std::vector<double>` while shape metadata describes the
+tensor's dimensions. The implementation establishes rank, element count,
+constructor invariants, and checked multidimensional indexing. It also shows
+how strides map tensor coordinates to flat storage without relying on a machine
+learning library.
+
+[Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/bedb564)
+· [Watch on YouTube](https://www.youtube.com/watch?v=DmU2b64tWfA)
+
+### Episode 2: Add tensor scalars, mutation, and reductions
+
+The tensor model expands to cover rank-zero scalars, singleton vectors, and
+empty tensors. We make shape multiplication safe from integer overflow, add
+const and mutable element access, and preserve the relationship between shape
+and storage. The first tensor reduction, `sum()`, turns any tensor into a scalar
+and defines the sum of an empty tensor as zero.
+
+[Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/b25de0c)
+· [Watch on YouTube](https://www.youtube.com/watch?v=8kzL5NdxGCo)
+
+### Episode 3: Implement C++ tensor operations and dot products
+
+Two tensors can now take part in the same calculation. We implement equal-shape
+elementwise addition, subtraction, and multiplication without changing either
+input. A dot product combines multiplication with a sum reduction, which lets
+the tensor express a complete linear prediction with weights, features, and a
+scalar bias.
+
+[Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/c4d4509)
+· [Watch on YouTube](https://www.youtube.com/watch?v=R_NZJ_rcX7E)
+
+### Episode 4: Build matrix multiplication in C++
+
+Matrix multiplication extends linear prediction from one observation to a
+batch of observations. The implementation validates rank and inner dimensions,
+then computes every output value as the dot product of one row and one column.
+The code makes the three-loop matrix multiplication algorithm and its row-major
+index calculations explicit.
+
+[Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/022c750)
+· [Watch on YouTube](https://www.youtube.com/watch?v=ZC6F284rRGo)
+
+### Episode 5: Implement tensor broadcasting in C++
+
+Elementwise operations no longer require identical shapes. We define
+NumPy-style broadcasting by aligning dimensions from the right and accepting
+dimensions that match or have size one. Effective zero strides reuse a
+broadcast value across an output dimension without allocating an expanded copy
+of the input tensor.
+
+[Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/79461fb)
+· [Watch on YouTube](https://www.youtube.com/watch?v=70mVVGNc0Ik)
+
+### Episode 6: Build mean squared error from scratch
+
+Division and `mean()` complete the operations needed for a basic regression
+loss. We compare predictions with targets, square each residual, and average the
+results to implement mean squared error in C++. The example also explains why
+raw residuals can cancel each other even when every prediction is wrong.
+
+[Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/92aa868)
+· [Watch on YouTube](https://www.youtube.com/watch?v=26Eg8tpM6_Q)
+
+### Episode 7: Build reverse-mode automatic differentiation in C++
+
+A separate scalar engine introduces computation graphs and reverse-mode
+automatic differentiation before those ideas reach the tensor class. `Value`
+objects share graph nodes that remember the operation and inputs behind each
+result. A topological traversal orders the graph, while the backward pass uses
+the chain rule and gradient accumulation to propagate a scalar loss back to
+weights and bias.
+
+[Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e692363)
+· [Watch on YouTube](https://www.youtube.com/watch?v=QEZvHrZDSdw)
+
 ## Direction
 
 The next stages will connect automatic differentiation to tensors and use it to
