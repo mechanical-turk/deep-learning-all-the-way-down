@@ -14,7 +14,7 @@ and custom CUDA kernels.
 
 ## Episodes
 
-The table links each published episode to its code checkpoint when available.
+Each episode ends with a Git commit that preserves the code written on screen.
 Use the commit links to inspect or run an earlier version.
 
 | Episode | Topics | Code | Video |
@@ -26,11 +26,7 @@ Use the commit links to inspect or run an earlier version.
 | 5 | Tensor broadcasting with effective strides | [`79461fb`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/79461fb) | [Watch](https://www.youtube.com/watch?v=70mVVGNc0Ik) |
 | 6 | Mean reduction, division, and mean squared error | [`92aa868`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/92aa868) | [Watch](https://www.youtube.com/watch?v=26Eg8tpM6_Q) |
 | 7 | Scalar computation graphs and reverse-mode autograd | [`e692363`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e692363) | [Watch](https://www.youtube.com/watch?v=QEZvHrZDSdw) |
-| 8 | Tensor autograd, shared graph nodes, and arithmetic backward rules | Checkpoint pending | [Watch](https://www.youtube.com/watch?v=RXCeVnhjHCQ) |
-
-Episode 8 is published. Its tensor-autograd code checkpoint has not yet been
-pushed; the code on `main` contains the tensor implementation through Episode 6
-and the separate scalar autograd engine from Episode 7.
+| 8 | Tensor computation graphs *(Work in progress)* |  |  |
 
 ## Why build this
 
@@ -113,7 +109,7 @@ We keep the code compact while building the foundations. We will split
 interfaces, implementations, tests, and benchmarks when that structure makes
 the code easier to understand.
 
-## Published code on main
+## Implementation status
 
 [`main.cpp`](./main.cpp) contains the tensor implementation developed through
 Episode 6. It supports:
@@ -140,9 +136,8 @@ automatic differentiation engine introduced in Episode 7. It supports:
 - local derivative rules and gradient accumulation;
 - a complete backward pass from scalar loss to weights and bias.
 
-In the published code, scalar autograd remains separate from `Tensor`. Episode 8
-shows how to add tensor-level graph history and arithmetic backward rules; that
-source checkpoint is still pending.
+Scalar autograd remains separate from `Tensor`. The next step will connect the
+two.
 
 ## Episode summaries
 
@@ -224,30 +219,12 @@ weights and bias.
 [Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e692363)
 · [Watch on YouTube](https://www.youtube.com/watch?v=QEZvHrZDSdw)
 
-### Episode 8: Add tensor autograd in C++
-
-Episode 8 brings automatic differentiation into the tensor implementation.
-Each tensor shares a node containing its shape, values, gradients, operation,
-and parent tensors. This keeps intermediate values alive and records each
-whole tensor operation as one step in the computation graph.
-
-We build the backward traversal, reset and seed gradients at a scalar result,
-and add the derivative rules for addition, subtraction, multiplication, and
-division. A shared helper maps output coordinates back to each input and adds
-gradient contributions when broadcasting reuses a value.
-
-Backward rules for `sum()` and `matmul()`, numerical gradient checks, and a
-linear regression training loop are deferred to the next episode. The code
-checkpoint for Episode 8 is pending.
-
-[Watch on YouTube](https://www.youtube.com/watch?v=RXCeVnhjHCQ)
-
 ## Direction
 
-The next episode will complete `sum()` and `matmul()` backward, check gradients,
-and use the tensor library to train a linear regression model. Future episodes
-will build toward neural network layers, optimizers, attention, transformers,
-systems profiling, GPU execution, and custom CUDA kernels.
+The next stages will connect automatic differentiation to tensors and use it to
+train small models. From there, the project will build toward neural network
+layers, optimizers, attention, transformers, systems profiling, GPU execution,
+and custom CUDA kernels.
 
 We will redesign the implementation when a new capability exposes a weakness
 in the current representation. Those redesigns are part of the material.
