@@ -26,7 +26,8 @@ Use the commit links to inspect or run an earlier version.
 | 5 | Tensor broadcasting with effective strides | [`79461fb`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/79461fb) | [Watch](https://www.youtube.com/watch?v=70mVVGNc0Ik) |
 | 6 | Mean reduction, division, and mean squared error | [`92aa868`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/92aa868) | [Watch](https://www.youtube.com/watch?v=26Eg8tpM6_Q) |
 | 7 | Scalar computation graphs and reverse-mode autograd | [`e692363`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e692363) | [Watch](https://www.youtube.com/watch?v=QEZvHrZDSdw) |
-| 8 | Tensor computation graphs *(Work in progress)* |  |  |
+| 8 | Tensor computation graphs and arithmetic autograd | [`7021cfe`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/7021cfe) | [Watch](https://www.youtube.com/watch?v=RXCeVnhjHCQ) |
+| 9 | Reduction and matrix multiplication backward, gradient checks, and linear regression *(Work in progress)* |  |  |
 
 ## Why build this
 
@@ -218,6 +219,18 @@ weights and bias.
 
 [Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e692363)
 · [Watch on YouTube](https://www.youtube.com/watch?v=QEZvHrZDSdw)
+
+### Episode 8: Add tensor autograd in C++
+
+The tensor now records whole operations in a computation graph. Shared nodes
+keep tensor values and gradients alive, while reverse topological traversal
+sends gradients back through addition, subtraction, multiplication, and
+division. The backward helper reuses broadcast strides to accumulate
+contributions into each input. Reduction and matrix multiplication backward
+remain for the next episode.
+
+[Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/7021cfe)
+· [Watch on YouTube](https://www.youtube.com/watch?v=RXCeVnhjHCQ)
 
 ## Direction
 
