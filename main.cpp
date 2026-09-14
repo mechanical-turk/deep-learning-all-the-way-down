@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <fstream>
 #include <limits>
@@ -18,7 +19,10 @@ enum class Operation {
   multiply,
   divide,
   sum,
-  matmul
+  matmul,
+  relu,
+  sigmoid,
+  tanh
 };
 
 struct TensorNode {
@@ -184,6 +188,36 @@ public:
           break;
         }
 
+        case Operation::relu: {
+          backward_unary(
+            output,
+            [](double input, double) {
+              return input > 0.0 ? 1.0 : 0.0;
+            }
+          );
+          break;
+        }
+
+        case Operation::sigmoid: {
+          backward_unary(
+            output, 
+            [](double, double result) {
+              return result * (1.0 - result);
+            }
+          );
+          break;
+        }
+
+        case Operation::tanh: {
+          backward_unary(
+            output,
+            [](double, double result) {
+              return 1.0 - result * result;
+            }
+          );
+          break;
+        }
+
         default:
           throw std::logic_error("backward rule not implemented yet");
       
@@ -227,6 +261,33 @@ public:
     output.node_->parents = {node_};
 
     return output;
+  }
+
+  [[nodiscard]] Tensor relu() const {
+    return elementwise_unary(
+      Operation::relu,
+      [](double value) {
+        return std::max(0.0, value);
+      }
+    );
+  }
+
+  [[nodiscard]] Tensor sigmoid() const {
+    return elementwise_unary(
+      Operation::sigmoid, 
+      [](double value) {
+        return 1.0 / (1.0 + std::exp(-value));
+      }
+    );
+  }
+
+  [[nodiscard]] Tensor tanh() const {
+    return elementwise_unary(
+      Operation::tanh,
+      [](double value) {
+        return std::tanh(value);
+      }
+    );
   }
 
   [[nodiscard]] Tensor mean() const {
@@ -392,6 +453,20 @@ private:
 
   }
 
+  static void backward_unary(
+    TensorNode* output,
+    const auto& local_derivative
+  ) {
+    TensorNode* input = output->parents[0].get();
+
+    for (std::size_t index = 0; index < output->data.size(); ++index) {
+      input->grad[index] +=
+        output->grad[index] *
+        local_derivative(input->data[index], output->data[index]);
+    }
+
+  }
+
 
   [[nodiscard]] Tensor elementwise_binary(
     const Tensor& other,
@@ -434,6 +509,23 @@ private:
     result.node_->left_strides = std::move(left_strides);
     result.node_->right_strides = std::move(right_strides);
 
+    return result;
+  }
+
+  [[nodiscard]] Tensor elementwise_unary(
+    Operation kind,
+    const auto& operation
+  ) const {
+    std::vector<double> result_data(numel());
+    std::transform(
+      node_->data.begin(),
+      node_->data.end(),
+      result_data.begin(),
+      operation
+    );
+    Tensor result(node_->shape, std::move(result_data));
+    result.node_->operation = kind;
+    result.node_->parents = {node_};
     return result;
   }
 
@@ -577,6 +669,30 @@ private:
   return inputs.matmul(weights) + bias;
 }
 
+[[nodiscard]] Tensor nonlinear_forward(
+  const Tensor& inputs,
+  const Tensor& weights,
+  const Tensor& bias
+) {
+  return (inputs.matmul(weights) + bias).tanh();
+}
+
+void show_activations() {
+  const Tensor inputs({5}, {-2.0, -1.0, 0.0, 1.0, 2.0});
+  const Tensor relu_outputs = inputs.relu();
+  const Tensor sigmoid_outputs = inputs.sigmoid();
+  const Tensor tanh_outputs = inputs.tanh();
+
+  std::cout << "x relu sigmoid\n";
+  for (std::size_t index = 0; index < inputs.numel(); ++index) {
+    std::cout
+      << inputs.at({index}) << ' '
+      << relu_outputs.at({index}) << ' '
+      << sigmoid_outputs.at({index}) << ' '
+      << tanh_outputs.at({index}) << '\n';
+  }
+}
+
 void gradient_step(
   Tensor& weights,
   Tensor& bias,
@@ -614,6 +730,26 @@ void train_linear_regression(
   }
 }
 
+void train_nonlinear_regression(
+  const Tensor& inputs,
+  const Tensor& targets,
+  Tensor& weights,
+  Tensor& bias,
+  std::size_t steps,
+  double learning_rate
+) {
+  for (std::size_t step = 0; step < steps; ++step) {
+    weights.zero_grad();
+    bias.zero_grad();
+
+    const Tensor predictions = nonlinear_forward(inputs, weights, bias);
+    Tensor loss = mse_loss(predictions, targets);
+    loss.backward();
+    gradient_step(weights, bias, learning_rate);
+  }
+}
+
+
 void train_line() {
   Tensor input(
     {10, 1},
@@ -640,6 +776,37 @@ void train_line() {
 
   std::cout << "Weight: " << weight.at({0, 0}) << " \n";
   std::cout << "Bias: " << bias.at({}) << " \n";
+}
+
+
+void train_curve() {
+  Tensor inputs(
+    {9, 1},
+    {
+      -1.0, -0.75, -0.5, -0.25, 0.0,
+      0.25, 0.5, 0.75, 1.0
+    }
+  );
+
+  Tensor targets(
+    {9, 1},
+    {
+      -0.761594, -0.462117, 0.0,
+      0.462117, 0.761594, 0.905148,
+      0.964028, 0.986614, 0.995055
+    }
+  );
+
+  // y = tanh(2x + 1)
+
+  Tensor weight({1,1}, {0.0});
+  Tensor bias({}, {0.0});
+
+  train_nonlinear_regression(inputs, targets, weight, bias, 100000, 0.01);
+
+  std::cout << "Weight: " << weight.at({0, 0}) << " \n";
+  std::cout << "Bias: " << bias.at({}) << " \n";
+
 }
 
 int main() {
@@ -957,6 +1124,10 @@ int main() {
 
 
   train_line();
+
+  show_activations();
+
+  train_curve();
 
   std::cout << "Success!\n";
   return 0;
