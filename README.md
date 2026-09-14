@@ -28,7 +28,8 @@ Use the commit links to inspect or run an earlier version.
 | 7 | Scalar computation graphs and reverse-mode autograd | [`e692363`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e692363) | [Watch](https://www.youtube.com/watch?v=QEZvHrZDSdw) |
 | 8 | Tensor computation graphs and arithmetic autograd | [`7021cfe`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/7021cfe) | [Watch](https://www.youtube.com/watch?v=RXCeVnhjHCQ) |
 | 9 | Sum and matrix multiplication backward, gradient descent, and linear regression | [`656f826`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/656f826) | [Watch](https://www.youtube.com/watch?v=h3p_rkzDPys) |
-| 10 | ReLU, sigmoid, tanh, and nonlinear regression *(Work in progress)* |  |  |
+| 10 | ReLU, sigmoid, tanh, and nonlinear regression | [`2846756`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/2846756092647df3e617021d3a468c07615317f4) | Video pending |
+| 11 | Neural-network modules and a first multilayer perceptron *(Work in progress)* |  |  |
 
 ## Why build this
 
@@ -244,6 +245,18 @@ from ten points on the line y = 2x + 1.
 
 [Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/656f826)
 · [Watch on YouTube](https://www.youtube.com/watch?v=h3p_rkzDPys)
+
+### Episode 10: Build activation functions in C++
+
+We add ReLU, sigmoid, and tanh to the Tensor, with forward and backward rules
+for each activation. Shared unary helpers apply the functions element by
+element and propagate gradients through the computation graph. We compare
+the activations on the same inputs, then train a nonlinear regression model
+on nine points from y = tanh(2x + 1). Starting from zero, gradient descent
+recovers a weight of 2 and a bias of 1.
+
+[Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/2846756092647df3e617021d3a468c07615317f4)
+· Video pending
 
 ## Direction
 
