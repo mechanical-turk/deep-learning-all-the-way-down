@@ -27,7 +27,8 @@ Use the commit links to inspect or run an earlier version.
 | 6 | Mean reduction, division, and mean squared error | [`92aa868`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/92aa868) | [Watch](https://www.youtube.com/watch?v=26Eg8tpM6_Q) |
 | 7 | Scalar computation graphs and reverse-mode autograd | [`e692363`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e692363) | [Watch](https://www.youtube.com/watch?v=QEZvHrZDSdw) |
 | 8 | Tensor computation graphs and arithmetic autograd | [`7021cfe`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/7021cfe) | [Watch](https://www.youtube.com/watch?v=RXCeVnhjHCQ) |
-| 9 | Reduction and matrix multiplication backward, gradient checks, and linear regression *(Work in progress)* |  |  |
+| 9 | Sum and matrix multiplication backward, gradient descent, and linear regression | [`656f826`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/656f826) | [Watch](https://www.youtube.com/watch?v=h3p_rkzDPys) |
+| 10 | ReLU, sigmoid, tanh, and nonlinear regression *(Work in progress)* |  |  |
 
 ## Why build this
 
@@ -231,6 +232,18 @@ remain for the next episode.
 
 [Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/7021cfe)
 · [Watch on YouTube](https://www.youtube.com/watch?v=RXCeVnhjHCQ)
+
+### Episode 9: Train linear regression in C++
+
+The tensor can now train a linear regression model from end to end. We build
+the batched forward pass, add backward rules for matrix multiplication and
+sum, and update the weight and bias with gradient descent. Parameter gradients
+reset between training steps while the backward pass clears temporary graph
+gradients. Starting from zero, the model learns a weight of 2 and a bias of 1
+from ten points on the line y = 2x + 1.
+
+[Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/656f826)
+· [Watch on YouTube](https://www.youtube.com/watch?v=h3p_rkzDPys)
 
 ## Direction
 
