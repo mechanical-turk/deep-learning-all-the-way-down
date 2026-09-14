@@ -83,6 +83,10 @@ public:
     return node_->grad;
   }
 
+  void zero_grad() {
+    std::fill(node_->grad.begin(), node_->grad.end(), 0.0);
+  }
+
   void backward() {
     if (rank() != 0) {
       throw std::invalid_argument("backward requires a scalar loss");
@@ -93,7 +97,9 @@ public:
     build_topology(node_.get(), visited, topology);
 
     for (TensorNode* node: topology) {
-      std::fill(node->grad.begin(), node->grad.end(), 0.0);
+      if (node->operation != Operation::leaf) {
+        std::fill(node->grad.begin(), node->grad.end(), 0.0);
+      }
     }
 
     node_->grad[0] = 1.0;
@@ -142,6 +148,41 @@ public:
             }
           );
           break;
+
+        case Operation::matmul: {
+          TensorNode* left = output->parents[0].get();
+          TensorNode* right = output->parents[1].get();
+
+          const std::size_t left_rows = left->shape[0];
+          const std::size_t left_cols = left->shape[1];
+          const std::size_t right_cols = right->shape[1];
+
+          for (std::size_t row = 0; row < left_rows; ++row) {
+            for (std::size_t col = 0; col < right_cols; ++col) {
+              const std::size_t output_index = row * right_cols + col;
+
+              for (std::size_t index = 0; index < left_cols; ++index) {
+                const std::size_t left_index = row * left_cols + index;
+                const std::size_t right_index = index * right_cols + col;
+
+                left->grad[left_index] += output->grad[output_index] * right->data[right_index];
+
+                right->grad[right_index] += output->grad[output_index] * left->data[left_index];
+              }
+            }
+          }
+
+          break;
+        }
+
+        case Operation::sum: {
+          TensorNode* input = output->parents[0].get();
+          for (double& gradient : input->grad) {
+            gradient += output->grad[0];
+          }
+
+          break;
+        }
 
         default:
           throw std::logic_error("backward rule not implemented yet");
@@ -528,6 +569,79 @@ private:
   return (residual * residual).mean();
 }
 
+[[nodiscard]] Tensor linear_forward(
+  const Tensor& inputs,
+  const Tensor& weights,
+  const Tensor& bias
+) {
+  return inputs.matmul(weights) + bias;
+}
+
+void gradient_step(
+  Tensor& weights,
+  Tensor& bias,
+  double learning_rate
+) {
+  // for every weight:
+  //   weight -= learning_rate * its gradient
+  // update the bias the same way
+
+  // {feature, 0}
+
+  for (std::size_t feature = 0; feature < weights.dimension(0); ++feature) {
+    weights.at({feature, 0}) -= learning_rate * weights.grad()[feature];
+  }
+
+  bias.at({}) -= learning_rate * bias.grad()[0];
+}
+
+void train_linear_regression(
+  const Tensor& inputs,
+  const Tensor& targets,
+  Tensor& weights,
+  Tensor& bias,
+  std::size_t steps,
+  double learning_rate
+) {
+  for (std::size_t step = 0; step < steps; ++step) {
+    weights.zero_grad();
+    bias.zero_grad();
+
+    const Tensor predictions = linear_forward(inputs, weights, bias);
+    Tensor loss = mse_loss(predictions, targets);
+    loss.backward();
+    gradient_step(weights, bias, learning_rate);
+  }
+}
+
+void train_line() {
+  Tensor input(
+    {10, 1},
+    {
+      0.0, 1.0, 2.0, 3.0, 4.0,
+      5.0, 6.0, 7.0, 8.0, 9.0
+    }
+  );
+
+  Tensor targets(
+    {10, 1},
+    {
+      1.0, 3.0, 5.0, 7.0, 9.0,
+      11.0, 13.0, 15.0, 17.0, 19.0
+    }
+  );
+
+  // y = 2x + 1
+  
+  Tensor weight({1,1}, {0.0});
+  Tensor bias({}, {0.0});
+
+  train_linear_regression(input, targets, weight, bias, 10000, 0.01);
+
+  std::cout << "Weight: " << weight.at({0, 0}) << " \n";
+  std::cout << "Bias: " << bias.at({}) << " \n";
+}
+
 int main() {
 
   std::vector<std::size_t> shape_1 {2, 3};
@@ -842,11 +956,8 @@ int main() {
   assert(&alias.data() == &predictions.data());
 
 
-
+  train_line();
 
   std::cout << "Success!\n";
   return 0;
 }
-
-
-
