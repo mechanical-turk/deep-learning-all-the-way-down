@@ -2,7 +2,10 @@
 #include <cmath>
 #include <cstddef>
 #include <fstream>
+#include <iomanip>
+#include <ios>
 #include <limits>
+#include <random>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -80,6 +83,10 @@ public:
   }
 
   [[nodiscard]] const std::vector<double>& data() const noexcept {
+    return node_->data;
+  }
+
+  [[nodiscard]] std::vector<double>& data() noexcept {
     return node_->data;
   }
 
@@ -661,6 +668,80 @@ private:
   return (residual * residual).mean();
 }
 
+class Linear {
+public:
+  Linear(
+    std::size_t in_features,
+    std::size_t out_features,
+    std::mt19937& random
+  ): weight_(random_weights(in_features, out_features, random)),
+     bias_({out_features}, std::vector<double>(out_features, 0.0)) {}
+
+  [[nodiscard]] Tensor forward(const Tensor& inputs) const {
+    return inputs.matmul(weight_) + bias_;
+  }
+
+  [[nodiscard]] std::vector<Tensor> parameters() const {
+    return {weight_, bias_};
+  }
+
+private:
+  Tensor weight_;
+  Tensor bias_;
+
+  [[nodiscard]] static Tensor random_weights(
+    std::size_t in_features,
+    std::size_t out_features,
+    std::mt19937& random
+  ) {
+    const double limit = 1.0 / std::sqrt(static_cast<double>(in_features));
+    std::uniform_real_distribution<double> distribution(-limit, limit);
+    std::vector<double> values(in_features * out_features);
+    for (double& value: values) {
+      value = distribution(random);
+    }
+    return Tensor({in_features, out_features}, std::move(values));
+  }
+};
+
+struct Tanh {
+  [[nodiscard]] Tensor forward(const Tensor& inputs) const {
+    return inputs.tanh();
+  }
+};
+
+class MLP {
+public:
+  MLP(
+    std::size_t in_features,
+    std::size_t hidden_features,
+    std::size_t out_features,
+    std::mt19937& random
+  ):
+    hidden_(in_features, hidden_features, random),
+    output_(hidden_features, out_features, random)
+   {}
+
+  [[nodiscard]] Tensor forward(const Tensor& inputs) const {
+    const Tensor hidden = activation_.forward(
+      hidden_.forward(inputs)
+    );
+    return output_.forward(hidden);
+  }
+
+  [[nodiscard]] std::vector<Tensor> parameters() {
+    std::vector<Tensor> result = hidden_.parameters();
+    const std::vector<Tensor> output = output_.parameters();
+    result.insert(result.end(), output.begin(), output.end());
+    return result;
+  }
+
+private:
+  Linear hidden_;
+  Tanh activation_;
+  Linear output_;
+};
+
 [[nodiscard]] Tensor linear_forward(
   const Tensor& inputs,
   const Tensor& weights,
@@ -694,21 +775,14 @@ void show_activations() {
 }
 
 void gradient_step(
-  Tensor& weights,
-  Tensor& bias,
+  std::vector<Tensor>& parameters,
   double learning_rate
 ) {
-  // for every weight:
-  //   weight -= learning_rate * its gradient
-  // update the bias the same way
-
-  // {feature, 0}
-
-  for (std::size_t feature = 0; feature < weights.dimension(0); ++feature) {
-    weights.at({feature, 0}) -= learning_rate * weights.grad()[feature];
+  for(Tensor& parameter: parameters) {
+    for (std::size_t index = 0; index < parameter.numel(); ++index) {
+      parameter.data()[index] -= learning_rate * parameter.grad()[index];
+    }
   }
-
-  bias.at({}) -= learning_rate * bias.grad()[0];
 }
 
 void train_linear_regression(
@@ -726,7 +800,8 @@ void train_linear_regression(
     const Tensor predictions = linear_forward(inputs, weights, bias);
     Tensor loss = mse_loss(predictions, targets);
     loss.backward();
-    gradient_step(weights, bias, learning_rate);
+    std::vector<Tensor> parameters {weights, bias};
+    gradient_step(parameters, learning_rate);
   }
 }
 
@@ -745,7 +820,8 @@ void train_nonlinear_regression(
     const Tensor predictions = nonlinear_forward(inputs, weights, bias);
     Tensor loss = mse_loss(predictions, targets);
     loss.backward();
-    gradient_step(weights, bias, learning_rate);
+    std::vector<Tensor> parameters {weights, bias};
+    gradient_step(parameters, learning_rate);
   }
 }
 
@@ -806,6 +882,54 @@ void train_curve() {
 
   std::cout << "Weight: " << weight.at({0, 0}) << " \n";
   std::cout << "Bias: " << bias.at({}) << " \n";
+
+}
+
+void train_xor() {
+  // a b   target
+  // 0 0     0
+  // 0 1     1
+  // 1 0     1
+  // 1 1     0
+  const Tensor inputs({4, 2}, {
+    0.0, 0.0,
+    0.0, 1.0,
+    1.0, 0.0,
+    1.0, 1.0
+  });
+  const Tensor targets({4, 1}, {0.0, 1.0, 1.0, 0.0});
+
+  std::mt19937 random(42);
+  MLP model(2, 4, 1, random);
+
+  std::vector<Tensor> parameters = model.parameters();
+
+  const double initial_loss = mse_loss(model.forward(inputs), targets).at({});
+
+  for (std::size_t step = 0; step < 5000; ++step) {
+    for (Tensor& parameter: parameters) {
+      parameter.zero_grad();
+    }
+
+    const Tensor predictions = model.forward(inputs);
+    Tensor loss = mse_loss(predictions, targets);
+    loss.backward();
+    gradient_step(parameters, 0.1);
+  }
+
+  const Tensor predictions = model.forward(inputs);
+  std::cout << std::fixed << std::setprecision(3);
+  std::cout << "Loss: " << initial_loss << " -> "
+            << mse_loss(predictions, targets).at({})
+            << '\n';
+  
+  std::cout << "a b prediction target\n";
+  for (std::size_t row = 0; row < inputs.dimension(0); ++row) {
+    std::cout << inputs.at({row, 0}) << ' '
+              << inputs.at({row, 1}) << ' '
+              << predictions.at({row, 0}) << ' '
+              << targets.at({row, 0}) << '\n';
+  }
 
 }
 
@@ -1129,6 +1253,19 @@ int main() {
 
   train_curve();
 
+  train_xor();
+
   std::cout << "Success!\n";
   return 0;
 }
+
+
+
+
+
+
+// a b   target
+// 0 0     0
+// 0 1     1
+// 1 0     1
+// 1 1     0
