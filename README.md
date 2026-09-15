@@ -29,7 +29,8 @@ Use the commit links to inspect or run an earlier version.
 | 8 | Tensor computation graphs and arithmetic autograd | [`7021cfe`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/7021cfe) | [Watch](https://www.youtube.com/watch?v=RXCeVnhjHCQ) |
 | 9 | Sum and matrix multiplication backward, gradient descent, and linear regression | [`656f826`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/656f826) | [Watch](https://www.youtube.com/watch?v=h3p_rkzDPys) |
 | 10 | ReLU, sigmoid, tanh, and nonlinear regression | [`2846756`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/2846756092647df3e617021d3a468c07615317f4) | Video pending |
-| 11 | Neural-network modules and a first multilayer perceptron *(Work in progress)* |  |  |
+| 11 | Reusable neural-network layers, parameter lists, and an MLP that learns XOR | [`e4dffe6`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e4dffe6eb00688bdfdd7728f94764b5be0996445) | Video pending |
+| 12 | MNIST digit recognition, mini-batches, and cross-entropy *(Work in progress)* |  |  |
 
 ## Why build this
 
@@ -256,6 +257,18 @@ on nine points from y = tanh(2x + 1). Starting from zero, gradient descent
 recovers a weight of 2 and a bias of 1.
 
 [Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/2846756092647df3e617021d3a468c07615317f4)
+· Video pending
+
+### Episode 11: Build neural network modules and learn XOR
+
+We wrap weights, biases, and the forward pass in a reusable Linear layer, then
+connect two layers with a Tanh activation to build a multilayer perceptron.
+Each layer exposes its trainable parameters so the training loop can reset
+their gradients and update every weight and bias. Our existing tensor autograd
+handles backpropagation through both layers. We train a 2-4-1 network from
+random weights and check its predictions on all four XOR inputs.
+
+[Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e4dffe6eb00688bdfdd7728f94764b5be0996445)
 · Video pending
 
 ## Direction
