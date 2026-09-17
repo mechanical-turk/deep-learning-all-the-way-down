@@ -30,7 +30,8 @@ Use the commit links to inspect or run an earlier version.
 | 9 | Sum and matrix multiplication backward, gradient descent, and linear regression | [`656f826`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/656f826) | [Watch](https://www.youtube.com/watch?v=h3p_rkzDPys) |
 | 10 | ReLU, sigmoid, tanh, and nonlinear regression | [`2846756`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/2846756092647df3e617021d3a468c07615317f4) | Video pending |
 | 11 | Reusable neural-network layers, parameter lists, and an MLP that learns XOR | [`e4dffe6`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e4dffe6eb00688bdfdd7728f94764b5be0996445) | Video pending |
-| 12 | MNIST digit recognition, mini-batches, and cross-entropy *(Work in progress)* |  |  |
+| 12 | MNIST digit recognition, mini-batches, softmax, and cross-entropy | [`c9918e8`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/c9918e8605fbc178d8a7d3d8063ae036fcfcb50b) | Video pending |
+| 13 | Library organization, GoogleTest, and CMake *(Work in progress)* |  |  |
 
 ## Why build this
 
@@ -281,6 +282,18 @@ handles backpropagation through both layers. We train a 2-4-1 network from
 random weights and check its predictions on all four XOR inputs.
 
 [Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e4dffe6eb00688bdfdd7728f94764b5be0996445)
+· Video pending
+
+### Episode 12: Recognize handwritten digits with MNIST
+
+We feed MNIST image batches into a 784-32-10 multilayer perceptron and train
+it to recognize handwritten digits. We add exp, log, and column sums with
+backward rules, then build softmax and cross-entropy from Tensor operations.
+A separate reader loads the original image and label files. The example
+trains on 10,000 images for five epochs and measures accuracy on 2,000
+separate test images.
+
+[Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/c9918e8605fbc178d8a7d3d8063ae036fcfcb50b)
 · Video pending
 
 ## Direction
