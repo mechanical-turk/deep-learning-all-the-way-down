@@ -1,3 +1,4 @@
+#include "mnist_reader.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -25,7 +26,10 @@ enum class Operation {
   matmul,
   relu,
   sigmoid,
-  tanh
+  tanh,
+  exp,
+  sum_columns,
+  log
 };
 
 struct TensorNode {
@@ -98,6 +102,45 @@ public:
     std::fill(node_->grad.begin(), node_->grad.end(), 0.0);
   }
 
+  [[nodiscard]] Tensor log() const {
+    return elementwise_unary(
+      Operation::log,
+      [](double value) {
+        if (!std::isfinite(value) || value <= 0.0) {
+          throw std::domain_error("log requires a positive finite value");
+        }
+        return std::log(value);
+      }
+    );
+  }
+
+  [[nodiscard]] Tensor sum_columns() const {
+    const std::size_t rows = dimension(0);
+    const std::size_t cols = dimension(1);
+
+    std::vector<double> totals(rows, 0.0);
+
+    for (std::size_t row = 0; row < rows; ++row) {
+      for (std::size_t col = 0; col < cols; ++col) {
+        totals[row] += at({row, col});
+      }
+    }
+
+    Tensor result({rows, 1}, std::move(totals));
+    result.node_->operation = Operation::sum_columns;
+    result.node_->parents = {node_};
+    return result;
+  }
+
+  [[nodiscard]] Tensor exp() const {
+    return elementwise_unary(
+      Operation::exp,
+      [](double value) {
+        return std::exp(value);
+      }
+    );
+  }
+
   void backward() {
     if (rank() != 0) {
       throw std::invalid_argument("backward requires a scalar loss");
@@ -119,6 +162,39 @@ public:
       TensorNode* output = *it;
       switch (output->operation) {
         case Operation::leaf:
+          break;
+
+        case Operation::log: {
+          backward_unary(
+            output,
+            [](double input, double) {
+              return 1.0 / input;
+            }
+          );
+          break;
+        }
+
+        case Operation::sum_columns: {
+          TensorNode* input = output->parents[0].get();
+          const std::size_t rows = input->shape[0];
+          const std::size_t cols = input->shape[1];
+
+          for (std::size_t row = 0; row < rows; ++row) {
+            for (std::size_t col = 0; col < cols; ++col) {
+              std::size_t index = row * cols + col;
+              input->grad[index] += output->grad[row];
+            }
+          }
+          break;
+        }
+
+        case Operation::exp:
+          backward_unary(
+            output,
+            [](double, double result) {
+              return result;
+            }
+          );
           break;
 
         case Operation::add:
@@ -933,6 +1009,149 @@ void train_xor() {
 
 }
 
+[[nodiscard]] Tensor cross_entropy_loss(
+  const Tensor& probabilities,
+  const std::vector<std::size_t>& labels
+) {
+  Tensor targets(
+    probabilities.shape(),
+    std::vector<double>(probabilities.numel(), 0.0)
+  );
+  for (std::size_t row = 0; row < labels.size(); ++row) {
+    targets.at({row, labels[row]}) = 1.0;
+  }
+  const Tensor log_probabilities = probabilities.log();
+  const Tensor negative_one({}, {-1.0});
+  const Tensor class_losses = log_probabilities * negative_one;
+  const Tensor selected_losses = class_losses * targets;
+  const Tensor total_loss = selected_losses.sum();
+
+  const double image_count = static_cast<double>(labels.size());
+  const Tensor batch_size({}, {image_count});
+
+  const Tensor mean_loss = total_loss / batch_size;
+  return mean_loss;
+}
+
+[[nodiscard]] Tensor softmax(const Tensor& scores) {
+  const Tensor positive = scores.exp();
+  const Tensor totals = positive.sum_columns();
+  return positive / totals;
+}
+
+[[nodiscard]] std::size_t count_correct(
+  const Tensor& scores,
+  const std::vector<std::size_t>& labels
+) {
+  std::size_t correct = 0;
+  for (std::size_t row = 0; row < labels.size(); ++row) {
+    std::size_t predicted = 0;
+    for (std::size_t digit = 1; digit < 10; ++digit) {
+      if (scores.at({row, digit}) > scores.at({row, predicted})) {
+        predicted = digit;
+      }
+    }
+    correct += predicted == labels[row];
+  }
+  return correct;
+}
+
+void train_mnist() {
+    MnistReader preview(
+      "data/train-images-idx3-ubyte", 
+      "data/train-labels-idx1-ubyte"
+    );
+
+    MnistBatch sample = preview.read_batch(1);
+
+    // 28 x 28 = 784
+
+    const Tensor image(
+      {1, 784}, 
+      std::move(sample.pixels)
+    );
+
+    std::mt19937 random(42);
+    MLP model(784, 32, 10, random);
+
+    const Tensor scores = model.forward(image);
+    const Tensor probabilities = softmax(scores);
+
+    std::cout << "Correct digit: " << sample.labels[0] << '\n';
+    for (std::size_t digit = 0; digit < 10; ++digit) {
+      std::cout << digit << ": " 
+        << scores.at({0, digit}) << ", "
+        << probabilities.at({0, digit}) 
+        << '\n';
+    }
+
+    std::cout << "Probability total: " << probabilities.sum().at({}) << " \n";
+
+    std::vector<Tensor> parameters = model.parameters();
+
+    for(std::size_t epoch = 0; epoch < 5; ++epoch) {
+      std::cout << "Training epoch: " << epoch + 1 << "/5\n";
+      MnistReader training(
+        "data/train-images-idx3-ubyte", 
+        "data/train-labels-idx1-ubyte"
+      );
+      double total_loss = 0.0;
+      std::size_t seen = 0.0;
+
+      while (seen < 10000) {
+        MnistBatch batch = training.read_batch(
+          std::min<std::size_t>(64, 10000 - seen)
+        );
+        const Tensor inputs(
+          {batch.labels.size(), 784},
+          std::move(batch.pixels)
+        );
+        for (Tensor& parameter: parameters) {
+          parameter.zero_grad();
+        }
+        const Tensor logits = model.forward(inputs);
+        const Tensor probabilities = softmax(logits);
+        Tensor loss = cross_entropy_loss(probabilities, batch.labels);
+        loss.backward();
+        gradient_step(parameters, 0.1);
+
+        total_loss += loss.at({}) * batch.labels.size();
+        seen += batch.labels.size();
+      }
+
+      std::cout << "Epoch " << epoch + 1 << " loss: " << total_loss / seen << "\n\n";
+    }
+
+    MnistReader test(
+      "data/t10k-images-idx3-ubyte", 
+      "data/t10k-labels-idx1-ubyte"
+    );
+
+    std::size_t correct = 0;
+    std::size_t tested = 0;
+
+    while (tested < 2000) {
+      MnistBatch batch = test.read_batch(
+        std::min<std::size_t>(64, 2000 - tested)
+      );
+      const Tensor inputs(
+        {batch.labels.size(), 784},
+        std::move(batch.pixels)
+      );
+
+      correct += count_correct(
+        model.forward(inputs),
+        batch.labels
+      );
+      tested += batch.labels.size();
+    }
+
+    std::cout << "Test accuracy: "  << 
+      100.0 * correct / tested <<
+      "% (" << correct << '/' << tested << ")\n";
+
+}
+
 int main() {
 
   std::vector<std::size_t> shape_1 {2, 3};
@@ -1247,25 +1466,16 @@ int main() {
   assert(&alias.data() == &predictions.data());
 
 
-  train_line();
+  // train_line();
 
-  show_activations();
+  // show_activations();
 
-  train_curve();
+  // train_curve();
 
-  train_xor();
+  // train_xor();
+
+  train_mnist();
 
   std::cout << "Success!\n";
   return 0;
 }
-
-
-
-
-
-
-// a b   target
-// 0 0     0
-// 0 1     1
-// 1 0     1
-// 1 1     0

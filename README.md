@@ -55,10 +55,19 @@ learning frameworks.
 The current programs are self-contained, use C++23, and depend only on the C++
 standard library.
 
-Using Clang:
+For the Chapter 12 MNIST example, first download the data once:
 
 ```sh
-clang++ -std=c++23 main.cpp -o main
+bash scripts/download-mnist.sh
+```
+
+This places verified files in `data/`. Keep your terminal in the repository
+root when compiling and running. See [data setup and attribution](data/README.md).
+
+Compile with Clang:
+
+```sh
+clang++ -std=c++23 -O2 main.cpp -o main
 ./main
 
 clang++ -std=c++23 scalar_autograd.cpp -o scalar_main
@@ -104,6 +113,9 @@ git switch main
 .
 ├── main.cpp             # cumulative Tensor implementation
 ├── scalar_autograd.cpp  # scalar reverse-mode autograd
+├── mnist_reader.hpp     # Chapter 12 binary image and label reader
+├── data/                # setup notes and locally downloaded MNIST files
+├── scripts/             # checksum-verified MNIST downloader
 ├── .clang-format        # formatting rules used in the series
 ├── .clangd              # clangd configuration
 └── .vscode              # editor settings used while recording
