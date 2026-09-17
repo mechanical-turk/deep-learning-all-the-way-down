@@ -12,12 +12,25 @@
   "terminal.integrated.fontSize": 21,
   "terminal.integrated.lineHeight": 1.33,
   "editor.wordWrap": "wordWrapColumn",
-  "editor.wordWrapColumn": 82,
-  // "editor.rulers": [82],
+  "editor.wordWrapColumn": 81,
+  "editor.rulers": [82],
   "editor.scrollBeyondLastLine": true,
+  "editor.scrollbar.vertical": "hidden",
+  "editor.scrollbar.horizontal": "hidden",
   "editor.smoothScrolling": false,
   "editor.inertialScroll": false,
   "editor.fontWeight": "500",
+
+  // Keep Markdown compact and distraction-free without affecting code files.
+  "[markdown]": {
+    "editor.lineNumbers": "off",
+    "editor.fontSize": 12,
+    "editor.lineHeight": 16,
+    "editor.showFoldingControls": "never"
+  },
+  "[cpp]": {
+    "editor.showFoldingControls": "never"
+  },
 
   // Keep the lower-right corner clear for a recorder-managed webcam overlay.
   "editor.minimap.enabled": false,
