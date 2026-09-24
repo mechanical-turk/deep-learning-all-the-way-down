@@ -17,7 +17,7 @@ and custom CUDA kernels.
 Each episode ends with a Git commit that preserves the code written on screen.
 Use the commit links to inspect or run an earlier version.
 
-| Episode | Topics | Code | Video |
+| Chapter | Topics | Code | Video |
 | --- | --- | --- | --- |
 | 1 | Tensor storage, shape, rank, invariants, and checked indexing | [`bedb564`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/bedb564) | [Watch](https://www.youtube.com/watch?v=DmU2b64tWfA) |
 | 2 | Scalars, empty tensors, overflow checks, mutation, and `sum()` | [`b25de0c`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/b25de0c) | [Watch](https://www.youtube.com/watch?v=8kzL5NdxGCo) |
@@ -28,8 +28,8 @@ Use the commit links to inspect or run an earlier version.
 | 7 | Scalar computation graphs and reverse-mode autograd | [`e692363`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e692363) | [Watch](https://www.youtube.com/watch?v=QEZvHrZDSdw) |
 | 8 | Tensor computation graphs and arithmetic autograd | [`7021cfe`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/7021cfe) | [Watch](https://www.youtube.com/watch?v=RXCeVnhjHCQ) |
 | 9 | Sum and matrix multiplication backward, gradient descent, and linear regression | [`656f826`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/656f826) | [Watch](https://www.youtube.com/watch?v=h3p_rkzDPys) |
-| 10 | ReLU, sigmoid, tanh, and nonlinear regression | [`2846756`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/2846756092647df3e617021d3a468c07615317f4) | Video pending |
-| 11 | Reusable neural-network layers, parameter lists, and an MLP that learns XOR | [`e4dffe6`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e4dffe6eb00688bdfdd7728f94764b5be0996445) | Video pending |
+| 10 | ReLU, sigmoid, tanh, and nonlinear regression | [`2846756`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/2846756092647df3e617021d3a468c07615317f4) | [Watch](https://www.youtube.com/watch?v=D_DiZpaKwr0) |
+| 11 | Reusable neural-network layers, parameter lists, and an MLP that learns XOR | [`e4dffe6`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e4dffe6eb00688bdfdd7728f94764b5be0996445) | [Watch](https://www.youtube.com/watch?v=Jiqc8jW1skM) |
 | 12 | MNIST digit recognition, mini-batches, softmax, and cross-entropy | [`c9918e8`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/c9918e8605fbc178d8a7d3d8063ae036fcfcb50b) | Video pending |
 | 13 | Library organization, GoogleTest, and CMake *(Work in progress)* |  |  |
 
@@ -270,7 +270,7 @@ on nine points from y = tanh(2x + 1). Starting from zero, gradient descent
 recovers a weight of 2 and a bias of 1.
 
 [Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/2846756092647df3e617021d3a468c07615317f4)
-· Video pending
+· [Watch on YouTube](https://www.youtube.com/watch?v=D_DiZpaKwr0)
 
 ### Episode 11: Build neural network modules and learn XOR
 
@@ -282,7 +282,7 @@ handles backpropagation through both layers. We train a 2-4-1 network from
 random weights and check its predictions on all four XOR inputs.
 
 [Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e4dffe6eb00688bdfdd7728f94764b5be0996445)
-· Video pending
+· [Watch on YouTube](https://www.youtube.com/watch?v=Jiqc8jW1skM)
 
 ### Episode 12: Recognize handwritten digits with MNIST
 
