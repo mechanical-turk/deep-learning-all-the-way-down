@@ -30,8 +30,9 @@ Use the commit links to inspect or run an earlier version.
 | 9 | Sum and matrix multiplication backward, gradient descent, and linear regression | [`656f826`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/656f826) | [Watch](https://www.youtube.com/watch?v=h3p_rkzDPys) |
 | 10 | ReLU, sigmoid, tanh, and nonlinear regression | [`2846756`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/2846756092647df3e617021d3a468c07615317f4) | [Watch](https://www.youtube.com/watch?v=D_DiZpaKwr0) |
 | 11 | Reusable neural-network layers, parameter lists, and an MLP that learns XOR | [`e4dffe6`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e4dffe6eb00688bdfdd7728f94764b5be0996445) | [Watch](https://www.youtube.com/watch?v=Jiqc8jW1skM) |
-| 12 | MNIST digit recognition, mini-batches, softmax, and cross-entropy | [`c9918e8`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/c9918e8605fbc178d8a7d3d8063ae036fcfcb50b) | Video pending |
-| 13 | Library organization, GoogleTest, and CMake *(Work in progress)* |  |  |
+| 12 | MNIST digit recognition, mini-batches, softmax, and cross-entropy | [`c9918e8`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/c9918e8605fbc178d8a7d3d8063ae036fcfcb50b) | [Watch](https://www.youtube.com/watch?v=12MUX0SD4lc) |
+| 13 | Deeper neural networks, composable layers, ReLU, and learning rate decay | [`dc29a21`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/dc29a21f43e32992f81958d94d3a506eb5d1ca36) | Private upload; public release pending |
+| 14 | *(Work in progress)* |  |  |
 
 ## Why build this
 
@@ -294,7 +295,20 @@ trains on 10,000 images for five epochs and measures accuracy on 2,000
 separate test images.
 
 [Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/c9918e8605fbc178d8a7d3d8063ae036fcfcb50b)
-· Video pending
+· [Watch on YouTube](https://www.youtube.com/watch?v=12MUX0SD4lc)
+
+### Episode 13: Build deeper networks and add learning rate decay
+
+We introduce a Layer interface and a Sequence container that owns its layers
+with `std::unique_ptr`. Linear, Tanh, and ReLU layers let us change a neural
+network's depth and activations without rewriting the training loop. We
+experiment with MNIST training and multiply the learning rate by a decay
+factor after each epoch. The final example uses six hidden layers, trains
+for ten epochs, and tests on 2,000 images. The activation plots used in the
+episode are included as `relu.png` and `tanh.png`.
+
+[Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/dc29a21f43e32992f81958d94d3a506eb5d1ca36)
+· Private upload; public release pending
 
 ## Direction
 
