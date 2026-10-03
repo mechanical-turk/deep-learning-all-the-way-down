@@ -744,7 +744,17 @@ private:
   return (residual * residual).mean();
 }
 
-class Linear {
+class Layer {
+public:
+  virtual ~Layer() = default;
+
+  [[nodiscard]] virtual Tensor forward(const Tensor& inputs) const = 0;
+
+  [[nodiscard]] virtual std::vector<Tensor> parameters() const = 0;
+  
+};
+
+class Linear: public Layer {
 public:
   Linear(
     std::size_t in_features,
@@ -753,11 +763,11 @@ public:
   ): weight_(random_weights(in_features, out_features, random)),
      bias_({out_features}, std::vector<double>(out_features, 0.0)) {}
 
-  [[nodiscard]] Tensor forward(const Tensor& inputs) const {
+  [[nodiscard]] Tensor forward(const Tensor& inputs) const override {
     return inputs.matmul(weight_) + bias_;
   }
 
-  [[nodiscard]] std::vector<Tensor> parameters() const {
+  [[nodiscard]] std::vector<Tensor> parameters() const override {
     return {weight_, bias_};
   }
 
@@ -780,9 +790,23 @@ private:
   }
 };
 
-struct Tanh {
-  [[nodiscard]] Tensor forward(const Tensor& inputs) const {
+struct Tanh: public Layer {
+  [[nodiscard]] Tensor forward(const Tensor& inputs) const override {
     return inputs.tanh();
+  }
+
+  [[nodiscard]] std::vector<Tensor> parameters() const override {
+    return {};
+  }
+};
+
+struct ReLU: public Layer {
+  [[nodiscard]] Tensor forward(const Tensor& inputs) const override {
+    return inputs.relu();
+  }
+
+  [[nodiscard]] std::vector<Tensor> parameters() const override {
+    return {};
   }
 };
 
@@ -833,6 +857,34 @@ private:
 ) {
   return (inputs.matmul(weights) + bias).tanh();
 }
+
+class Sequence {
+public:
+  void push_back(std::unique_ptr<Layer> layer) {
+    layers_.push_back(std::move(layer));
+  }
+
+  [[nodiscard]] Tensor forward(const Tensor& inputs) const {
+    Tensor current = inputs;
+    for (const auto& layer: layers_) {
+      current = layer->forward(current);
+    }
+    return current;
+  }
+
+  [[nodiscard]] std::vector<Tensor> parameters() const {
+    std::vector<Tensor> result;
+    for (const auto& layer: layers_) {
+      for (const auto& parameter: layer->parameters()) {
+        result.push_back(parameter);
+      }
+    }
+    return result;
+  }
+
+private:
+  std::vector<std::unique_ptr<Layer>> layers_;
+};
 
 void show_activations() {
   const Tensor inputs({5}, {-2.0, -1.0, 0.0, 1.0, 2.0});
@@ -1072,7 +1124,22 @@ void train_mnist() {
     );
 
     std::mt19937 random(42);
-    MLP model(784, 32, 10, random);
+    // MLP model(784, 32, 10, random);
+
+    Sequence model;
+    model.push_back(std::make_unique<Linear>(784, 128, random));
+    model.push_back(std::make_unique<ReLU>());
+    model.push_back(std::make_unique<Linear>(128, 32, random)); // 4K 
+    model.push_back(std::make_unique<ReLU>());
+    model.push_back(std::make_unique<Linear>(32, 32, random)); // 1K
+    model.push_back(std::make_unique<ReLU>());
+    model.push_back(std::make_unique<Linear>(32, 32, random)); // 1K
+    model.push_back(std::make_unique<ReLU>());
+    model.push_back(std::make_unique<Linear>(32, 32, random)); // 1K
+    model.push_back(std::make_unique<ReLU>());
+    model.push_back(std::make_unique<Linear>(32, 32, random)); // 1K
+    model.push_back(std::make_unique<ReLU>());
+    model.push_back(std::make_unique<Linear>(32, 10, random));
 
     const Tensor scores = model.forward(image);
     const Tensor probabilities = softmax(scores);
@@ -1089,8 +1156,14 @@ void train_mnist() {
 
     std::vector<Tensor> parameters = model.parameters();
 
-    for(std::size_t epoch = 0; epoch < 5; ++epoch) {
-      std::cout << "Training epoch: " << epoch + 1 << "/5\n";
+    const std::size_t EPOCHS = 10;
+    const double INITIAL_LEARNING_RATE = 0.5;
+    const double DECAY_RATE = 0.9;
+
+    double learning_rate = INITIAL_LEARNING_RATE;
+
+    for(std::size_t epoch = 0; epoch < EPOCHS; ++epoch) {
+      std::cout << "Training epoch: " << epoch + 1 << "/" << EPOCHS << "\n";
       MnistReader training(
         "data/train-images-idx3-ubyte", 
         "data/train-labels-idx1-ubyte"
@@ -1113,13 +1186,15 @@ void train_mnist() {
         const Tensor probabilities = softmax(logits);
         Tensor loss = cross_entropy_loss(probabilities, batch.labels);
         loss.backward();
-        gradient_step(parameters, 0.1);
+        gradient_step(parameters, learning_rate);
 
         total_loss += loss.at({}) * batch.labels.size();
         seen += batch.labels.size();
       }
 
       std::cout << "Epoch " << epoch + 1 << " loss: " << total_loss / seen << "\n\n";
+
+      learning_rate *= DECAY_RATE;
     }
 
     MnistReader test(
