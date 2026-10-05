@@ -31,8 +31,8 @@ Use the commit links to inspect or run an earlier version.
 | 10 | ReLU, sigmoid, tanh, and nonlinear regression | [`2846756`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/2846756092647df3e617021d3a468c07615317f4) | [Watch](https://www.youtube.com/watch?v=D_DiZpaKwr0) |
 | 11 | Reusable neural-network layers, parameter lists, and an MLP that learns XOR | [`e4dffe6`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e4dffe6eb00688bdfdd7728f94764b5be0996445) | [Watch](https://www.youtube.com/watch?v=Jiqc8jW1skM) |
 | 12 | MNIST digit recognition, mini-batches, softmax, and cross-entropy | [`c9918e8`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/c9918e8605fbc178d8a7d3d8063ae036fcfcb50b) | [Watch](https://www.youtube.com/watch?v=12MUX0SD4lc) |
-| 13 | Deeper neural networks, composable layers, ReLU, and learning rate decay | [`dc29a21`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/dc29a21f43e32992f81958d94d3a506eb5d1ca36) | Private upload; public release pending |
-| 14 | *(Work in progress)* |  |  |
+| 13 | Deeper neural networks, composable layers, ReLU, and learning rate decay | [`dc29a21`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/dc29a21f43e32992f81958d94d3a506eb5d1ca36) | [Watch](https://www.youtube.com/watch?v=yonurmbDkbM) |
+| 14 | Optimizers and residual connections *(Work in progress)* |  |  |
 
 ## Why build this
 
@@ -57,7 +57,7 @@ learning frameworks.
 The current programs are self-contained, use C++23, and depend only on the C++
 standard library.
 
-For the Chapter 12 MNIST example, first download the data once:
+For the MNIST examples, first download the data once:
 
 ```sh
 bash scripts/download-mnist.sh
@@ -129,8 +129,8 @@ the code easier to understand.
 
 ## Implementation status
 
-[`main.cpp`](./main.cpp) contains the tensor implementation developed through
-Episode 6. It supports:
+[`main.cpp`](./main.cpp) contains the tensor and neural network implementation
+developed through Episode 13. It supports:
 
 - owned `double` storage with explicit shape metadata;
 - rank-zero scalars and empty tensors;
@@ -141,7 +141,13 @@ Episode 6. It supports:
 - vector dot products;
 - rank-two matrix multiplication;
 - NumPy-style broadcasting through effective zero strides;
-- mean squared error.
+- mean squared error;
+- tensor computation graphs, reverse-mode autograd, and broadcast gradients;
+- ReLU, sigmoid, tanh, exp, log, and column reductions with backward rules;
+- softmax and cross-entropy built from tensor operations;
+- Linear, Tanh, and ReLU layers behind a shared Layer interface;
+- a Sequence container for stacking layers and collecting parameters;
+- mini-batch MNIST training with gradient descent and learning rate decay.
 
 [`scalar_autograd.cpp`](./scalar_autograd.cpp) contains the scalar reverse-mode
 automatic differentiation engine introduced in Episode 7. It supports:
@@ -154,8 +160,9 @@ automatic differentiation engine introduced in Episode 7. It supports:
 - local derivative rules and gradient accumulation;
 - a complete backward pass from scalar loss to weights and bias.
 
-Scalar autograd remains separate from `Tensor`. The next step will connect the
-two.
+The scalar program remains a standalone teaching example. Tensor-level
+autograd in `main.cpp` records whole tensor operations and trains the models
+used in the later episodes.
 
 ## Episode summaries
 
@@ -302,20 +309,25 @@ separate test images.
 We introduce a Layer interface and a Sequence container that owns its layers
 with `std::unique_ptr`. Linear, Tanh, and ReLU layers let us change a neural
 network's depth and activations without rewriting the training loop. We
-experiment with MNIST training and multiply the learning rate by a decay
-factor after each epoch. The final example uses six hidden layers, trains
+compare depth, parameter count, activations, and training duration on MNIST,
+then add learning rate decay to reduce the update size after each epoch.
+The final example uses six hidden layers, trains
 for ten epochs, and tests on 2,000 images. The activation plots used in the
 episode are included as `relu.png` and `tanh.png`.
 
 [Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/dc29a21f43e32992f81958d94d3a506eb5d1ca36)
-· Private upload; public release pending
+· [Watch on YouTube](https://www.youtube.com/watch?v=yonurmbDkbM)
 
 ## Direction
 
-The next stages will connect automatic differentiation to tensors and use it to
-train small models. From there, the project will build toward neural network
-layers, optimizers, attention, transformers, systems profiling, GPU execution,
-and custom CUDA kernels.
+We can now stack neural network layers and train them on MNIST. Next, we will
+work on optimizers, including momentum, and residual connections to improve
+training in deeper networks. These are planned additions, not features in the
+current checkpoint.
+
+Attention, transformers, systems profiling, GPU execution, and custom CUDA
+kernels remain longer-term goals. Splitting the code into a library and adding
+CMake and a unit-testing framework remain future cleanup work, not Episode 13.
 
 We will redesign the implementation when a new capability exposes a weakness
 in the current representation. Those redesigns are part of the material.
