@@ -748,6 +748,8 @@ class Layer {
 public:
   virtual ~Layer() = default;
 
+  [[nodiscard]] virtual std::string name() const = 0;
+
   [[nodiscard]] virtual Tensor forward(const Tensor& inputs) const = 0;
 
   [[nodiscard]] virtual std::vector<Tensor> parameters() const = 0;
@@ -762,6 +764,10 @@ public:
     std::mt19937& random
   ): weight_(random_weights(in_features, out_features, random)),
      bias_({out_features}, std::vector<double>(out_features, 0.0)) {}
+
+  [[nodiscard]] std::string name() const override {
+    return "Linear";
+  }
 
   [[nodiscard]] Tensor forward(const Tensor& inputs) const override {
     return inputs.matmul(weight_) + bias_;
@@ -791,6 +797,10 @@ private:
 };
 
 struct Tanh: public Layer {
+  [[nodiscard]] std::string name() const override {
+    return "Tanh";
+  }
+
   [[nodiscard]] Tensor forward(const Tensor& inputs) const override {
     return inputs.tanh();
   }
@@ -801,6 +811,10 @@ struct Tanh: public Layer {
 };
 
 struct ReLU: public Layer {
+  [[nodiscard]] std::string name() const override {
+    return "ReLU";
+  }
+
   [[nodiscard]] Tensor forward(const Tensor& inputs) const override {
     return inputs.relu();
   }
@@ -842,6 +856,28 @@ private:
   Linear output_;
 };
 
+class Residual : public Layer {
+public:
+  template <typename LayerType>
+  Residual(LayerType body) : body_(std::make_unique<LayerType>(std::move(body))) {}
+
+  [[nodiscard]] Tensor forward(const Tensor& inputs) const override {
+    return inputs + body_->forward(inputs);
+  }
+
+  [[nodiscard]] std::vector<Tensor> parameters() const override {
+    return body_->parameters();
+  }
+
+  [[nodiscard]] std::string name() const override {
+    return "Residual(" + body_->name() + ")";
+  }
+
+private:
+  std::unique_ptr<Layer> body_;
+
+};
+
 [[nodiscard]] Tensor linear_forward(
   const Tensor& inputs,
   const Tensor& weights,
@@ -858,13 +894,26 @@ private:
   return (inputs.matmul(weights) + bias).tanh();
 }
 
-class Sequence {
+class Sequence: public Layer {
 public:
-  void push_back(std::unique_ptr<Layer> layer) {
-    layers_.push_back(std::move(layer));
+
+  template <typename LayerType>
+  void push_back(LayerType layer) {
+    layers_.push_back(std::make_unique<LayerType>(std::move(layer)));
   }
 
-  [[nodiscard]] Tensor forward(const Tensor& inputs) const {
+  [[nodiscard]] std::string name() const override {
+    std::string result = "Sequence[";
+    for (std::size_t index = 0; index < layers_.size(); ++index) {
+      if (index > 0) {
+        result += ", ";
+      }
+      result += layers_[index]->name();
+    }
+    return result + "]";
+  }
+
+  [[nodiscard]] Tensor forward(const Tensor& inputs) const override {
     Tensor current = inputs;
     for (const auto& layer: layers_) {
       current = layer->forward(current);
@@ -872,7 +921,7 @@ public:
     return current;
   }
 
-  [[nodiscard]] std::vector<Tensor> parameters() const {
+  [[nodiscard]] std::vector<Tensor> parameters() const override {
     std::vector<Tensor> result;
     for (const auto& layer: layers_) {
       for (const auto& parameter: layer->parameters()) {
@@ -882,9 +931,45 @@ public:
     return result;
   }
 
+  struct TracedOutput {
+    std::string name;
+    Tensor output;
+  };
+
+  [[nodiscard]] std::vector<TracedOutput> forward_traced(
+    const Tensor& inputs
+  ) const {
+    std::vector<TracedOutput> outputs;
+
+    Tensor current = inputs;
+    for (const auto& layer: layers_) {
+      current = layer->forward(current);
+      outputs.push_back({
+        layer->name(),
+        current
+      });
+    }
+
+    return outputs;
+  }
+
 private:
+
   std::vector<std::unique_ptr<Layer>> layers_;
 };
+
+template <typename ActivationType = Tanh>
+[[nodiscard]] Sequence hidden_layer(
+  std::size_t in_features,
+  std::size_t out_features,
+  std::mt19937& random,
+  ActivationType activation = ActivationType()
+) {
+  Sequence layer;
+  layer.push_back(Linear(in_features, out_features, random));
+  layer.push_back(std::move(activation));
+  return layer;
+}
 
 void show_activations() {
   const Tensor inputs({5}, {-2.0, -1.0, 0.0, 1.0, 2.0});
@@ -1108,6 +1193,28 @@ void train_xor() {
   return correct;
 }
 
+[[nodiscard]] double root_mean_square(const std::vector<double>& values) {
+  double total = 0.0;
+  for (const double value: values) {
+    total += value * value;
+  }
+  return std::sqrt(total / values.size());
+}
+
+void print_trace(
+  const std::vector<Sequence::TracedOutput>& trace
+) {
+  for (std::size_t layer = 0; layer < trace.size(); ++layer) {
+    std::cout << std::format(
+      "layer {:2}  {:<32}  signal {:.1e}  gradient {:.1e}\n",
+      layer + 1,
+      trace[layer].name,
+      root_mean_square(trace[layer].output.data()),
+      root_mean_square(trace[layer].output.grad())
+    );
+  }
+}
+
 void train_mnist() {
     MnistReader preview(
       "data/train-images-idx3-ubyte", 
@@ -1127,19 +1234,16 @@ void train_mnist() {
     // MLP model(784, 32, 10, random);
 
     Sequence model;
-    model.push_back(std::make_unique<Linear>(784, 128, random));
-    model.push_back(std::make_unique<ReLU>());
-    model.push_back(std::make_unique<Linear>(128, 32, random)); // 4K 
-    model.push_back(std::make_unique<ReLU>());
-    model.push_back(std::make_unique<Linear>(32, 32, random)); // 1K
-    model.push_back(std::make_unique<ReLU>());
-    model.push_back(std::make_unique<Linear>(32, 32, random)); // 1K
-    model.push_back(std::make_unique<ReLU>());
-    model.push_back(std::make_unique<Linear>(32, 32, random)); // 1K
-    model.push_back(std::make_unique<ReLU>());
-    model.push_back(std::make_unique<Linear>(32, 32, random)); // 1K
-    model.push_back(std::make_unique<ReLU>());
-    model.push_back(std::make_unique<Linear>(32, 10, random));
+
+
+    model.push_back(hidden_layer(784, 32, random));
+
+    const int NUM_HIDDEN_LAYERS = 15;
+    for (int i = 0; i < NUM_HIDDEN_LAYERS; ++i) {
+      model.push_back(Residual(hidden_layer(32, 32, random)));
+    }
+
+    model.push_back(Linear(32, 10, random));
 
     const Tensor scores = model.forward(image);
     const Tensor probabilities = softmax(scores);
@@ -1156,9 +1260,9 @@ void train_mnist() {
 
     std::vector<Tensor> parameters = model.parameters();
 
-    const std::size_t EPOCHS = 10;
-    const double INITIAL_LEARNING_RATE = 0.5;
-    const double DECAY_RATE = 0.9;
+    const std::size_t EPOCHS = 20;
+    const double INITIAL_LEARNING_RATE = 0.08;
+    const double DECAY_RATE = 0.95;
 
     double learning_rate = INITIAL_LEARNING_RATE;
 
@@ -1182,10 +1286,14 @@ void train_mnist() {
         for (Tensor& parameter: parameters) {
           parameter.zero_grad();
         }
-        const Tensor logits = model.forward(inputs);
+        const auto trace = model.forward_traced(inputs);
+        const Tensor& logits = trace.back().output;
         const Tensor probabilities = softmax(logits);
         Tensor loss = cross_entropy_loss(probabilities, batch.labels);
         loss.backward();
+        if (epoch == 0 && seen == 0) {
+          print_trace(trace);
+        }
         gradient_step(parameters, learning_rate);
 
         total_loss += loss.at({}) * batch.labels.size();

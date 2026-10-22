@@ -32,7 +32,7 @@ Use the commit links to inspect or run an earlier version.
 | 11 | Reusable neural-network layers, parameter lists, and an MLP that learns XOR | [`e4dffe6`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e4dffe6eb00688bdfdd7728f94764b5be0996445) | [Watch](https://www.youtube.com/watch?v=Jiqc8jW1skM) |
 | 12 | MNIST digit recognition, mini-batches, softmax, and cross-entropy | [`c9918e8`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/c9918e8605fbc178d8a7d3d8063ae036fcfcb50b) | [Watch](https://www.youtube.com/watch?v=12MUX0SD4lc) |
 | 13 | Deeper neural networks, composable layers, ReLU, and learning rate decay | [`dc29a21`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/dc29a21f43e32992f81958d94d3a506eb5d1ca36) | [Watch](https://www.youtube.com/watch?v=yonurmbDkbM) |
-| 14 | Optimizers and residual connections *(Work in progress)* |  |  |
+| 14 | Residual connections and debugging gradients *(Work in progress)* |  |  |
 
 ## Why build this
 
@@ -130,7 +130,7 @@ the code easier to understand.
 ## Implementation status
 
 [`main.cpp`](./main.cpp) contains the tensor and neural network implementation
-developed through Episode 13. It supports:
+developed through Episode 14, which is still in progress. It supports:
 
 - owned `double` storage with explicit shape metadata;
 - rank-zero scalars and empty tensors;
@@ -147,7 +147,15 @@ developed through Episode 13. It supports:
 - softmax and cross-entropy built from tensor operations;
 - Linear, Tanh, and ReLU layers behind a shared Layer interface;
 - a Sequence container for stacking layers and collecting parameters;
-- mini-batch MNIST training with gradient descent and learning rate decay.
+- layer names, so a network can describe itself, and Sequences that are
+  themselves Layers and can nest;
+- a `hidden_layer` helper, `forward_traced`, and a per-layer report of the
+  root mean square of each output and its gradient;
+- a `Residual` layer that adds its input to the output of the layer it wraps;
+- mini-batch MNIST training with gradient descent and learning rate decay. The
+  current example stacks sixteen hidden layers with residual connections, trains
+  for 20 epochs at a starting rate of 0.08 with decay 0.95, and reached 92.85%
+  (1857/2000) on the test images in one run.
 
 [`scalar_autograd.cpp`](./scalar_autograd.cpp) contains the scalar reverse-mode
 automatic differentiation engine introduced in Episode 7. It supports:
@@ -318,16 +326,25 @@ episode are included as `relu.png` and `tanh.png`.
 [Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/dc29a21f43e32992f81958d94d3a506eb5d1ca36)
 · [Watch on YouTube](https://www.youtube.com/watch?v=yonurmbDkbM)
 
+### Episode 14: Residual connections and debugging gradients (work in progress)
+
+We stack sixteen hidden layers and look inside the network. Each layer reports
+the size of its output and the size of its gradient, which shows the gradient
+shrinking as it travels back through plain layers. A `Residual` layer adds its
+input to the output of the layer it wraps, so a gradient has a path that does
+not shrink. We also see what happens when the learning rate is too large for
+the new network. There is no code checkpoint or video for this episode yet.
+
 ## Direction
 
-We can now stack neural network layers and train them on MNIST. Next, we will
-work on optimizers, including momentum, and residual connections to improve
-training in deeper networks. These are planned additions, not features in the
-current checkpoint.
+We can now stack neural network layers, add residual connections, and train
+them on MNIST. Next, we plan to train on more data and work on optimizers,
+including momentum and velocity, and Adam. These are planned additions, not
+features in the current code.
 
 Attention, transformers, systems profiling, GPU execution, and custom CUDA
 kernels remain longer-term goals. Splitting the code into a library and adding
-CMake and a unit-testing framework remain future cleanup work, not Episode 13.
+CMake and a unit-testing framework remain future cleanup work, not Episode 14.
 
 We will redesign the implementation when a new capability exposes a weakness
 in the current representation. Those redesigns are part of the material.
