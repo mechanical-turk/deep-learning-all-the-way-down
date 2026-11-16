@@ -1311,9 +1311,9 @@ void train_mnist() {
 
     std::vector<Tensor> parameters = model.parameters();
 
-    const std::string OPTIMIZER = "momentum";
-    const double INITIAL_LEARNING_RATE = 0.1;
-    const std::size_t BATCH_SIZE = 64;
+    const std::string OPTIMIZER = "adam";
+    const double INITIAL_LEARNING_RATE = 0.01;
+    const std::size_t BATCH_SIZE = 250;
     const std::size_t EPOCHS = 5;
     double learning_rate = INITIAL_LEARNING_RATE;
     const double MOMENTUM = 0.9;
