@@ -33,7 +33,7 @@ Use the commit links to inspect or run an earlier version.
 | 12 | MNIST digit recognition, mini-batches, softmax, and cross-entropy | [`c9918e8`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/c9918e8605fbc178d8a7d3d8063ae036fcfcb50b) | [Watch](https://www.youtube.com/watch?v=12MUX0SD4lc) |
 | 13 | Deeper neural networks, composable layers, ReLU, and learning rate decay | [`dc29a21`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/dc29a21f43e32992f81958d94d3a506eb5d1ca36) | [Watch](https://www.youtube.com/watch?v=yonurmbDkbM) |
 | 14 | Residual connections and debugging gradients | [`47db7ed`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/47db7ed) | [Watch](https://www.youtube.com/watch?v=YZnfcbwwOdI) |
-| 15 | Momentum and Adam optimizers *(Work in progress)* |  |  |
+| 15 | Momentum and Adam optimizers, bias correction, and learning-rate search | [`1d2a49a`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/1d2a49a) |  |
 
 ## Why build this
 
@@ -157,10 +157,10 @@ developed through Episode 15, which is still in progress. It supports:
   bias correction), chosen by an `OPTIMIZER` constant;
 - mini-batch MNIST training on the first 10,000 training images, tested on 2,000
   separate test images. The current example is a 784-256-10 ReLU network trained
-  with momentum 0.9, learning rate 0.1, batch size 64 and five epochs, and
-  reached 94.25% (1885/2000) in one run. The commented settings in
-  `train_mnist` reproduce the plain gradient descent, momentum and Adam runs
-  from Episode 15. The Episode 14 residual network is still in the file.
+  with Adam, learning rate 0.01, batch size 250 and five epochs, and reached
+  93.65% (1873/2000) with an epoch 5 loss of 0.0510026. The notes in `main()`
+  record the plain gradient descent and momentum runs from Episode 15. The
+  Episode 14 residual network is still in the file.
 
 [`scalar_autograd.cpp`](./scalar_autograd.cpp) contains the scalar reverse-mode
 automatic differentiation engine introduced in Episode 7. It supports:
@@ -345,7 +345,7 @@ residual connections, trains for 20 epochs at a starting rate of 0.08 with decay
 [Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/47db7ed)
 · [Watch on YouTube](https://www.youtube.com/watch?v=YZnfcbwwOdI)
 
-### Episode 15: Momentum and Adam optimizers (work in progress)
+### Episode 15: Momentum and Adam optimizers
 
 Plain gradient descent uses only the current gradient. We add momentum, which
 keeps a running velocity so steady gradients build up, and read the loss and
@@ -353,7 +353,10 @@ gradient traces to choose the learning rate. We then build Adam from a copy of
 the momentum step: a per-weight step size from a running average of squared
 gradients, and a bias correction that uses the step count. Results depend on
 batch size and on how many epochs we train, so the comparisons state both.
-There is no code checkpoint or public video for this episode yet.
+The final run uses Adam at learning rate 0.01 and reaches 93.65% (1873/2000),
+against 93.75% for the best momentum run; both are single runs.
+
+[Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/1d2a49a)
 
 ## Direction
 
