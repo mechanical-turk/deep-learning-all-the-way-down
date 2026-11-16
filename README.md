@@ -32,7 +32,8 @@ Use the commit links to inspect or run an earlier version.
 | 11 | Reusable neural-network layers, parameter lists, and an MLP that learns XOR | [`e4dffe6`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/e4dffe6eb00688bdfdd7728f94764b5be0996445) | [Watch](https://www.youtube.com/watch?v=Jiqc8jW1skM) |
 | 12 | MNIST digit recognition, mini-batches, softmax, and cross-entropy | [`c9918e8`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/c9918e8605fbc178d8a7d3d8063ae036fcfcb50b) | [Watch](https://www.youtube.com/watch?v=12MUX0SD4lc) |
 | 13 | Deeper neural networks, composable layers, ReLU, and learning rate decay | [`dc29a21`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/dc29a21f43e32992f81958d94d3a506eb5d1ca36) | [Watch](https://www.youtube.com/watch?v=yonurmbDkbM) |
-| 14 | Residual connections and debugging gradients *(Work in progress)* |  |  |
+| 14 | Residual connections and debugging gradients | [`47db7ed`](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/47db7ed) | [Watch](https://www.youtube.com/watch?v=YZnfcbwwOdI) |
+| 15 | Momentum and Adam optimizers *(Work in progress)* |  |  |
 
 ## Why build this
 
@@ -130,7 +131,7 @@ the code easier to understand.
 ## Implementation status
 
 [`main.cpp`](./main.cpp) contains the tensor and neural network implementation
-developed through Episode 14, which is still in progress. It supports:
+developed through Episode 15, which is still in progress. It supports:
 
 - owned `double` storage with explicit shape metadata;
 - rank-zero scalars and empty tensors;
@@ -152,10 +153,14 @@ developed through Episode 14, which is still in progress. It supports:
 - a `hidden_layer` helper, `forward_traced`, and a per-layer report of the
   root mean square of each output and its gradient;
 - a `Residual` layer that adds its input to the output of the layer it wraps;
-- mini-batch MNIST training with gradient descent and learning rate decay. The
-  current example stacks sixteen hidden layers with residual connections, trains
-  for 20 epochs at a starting rate of 0.08 with decay 0.95, and reached 92.85%
-  (1857/2000) on the test images in one run.
+- gradient descent, momentum (`momentum_step`), and Adam (`adam_step`, with
+  bias correction), chosen by an `OPTIMIZER` constant;
+- mini-batch MNIST training on the first 10,000 training images, tested on 2,000
+  separate test images. The current example is a 784-256-10 ReLU network trained
+  with momentum 0.9, learning rate 0.1, batch size 64 and five epochs, and
+  reached 94.25% (1885/2000) in one run. The commented settings in
+  `train_mnist` reproduce the plain gradient descent, momentum and Adam runs
+  from Episode 15. The Episode 14 residual network is still in the file.
 
 [`scalar_autograd.cpp`](./scalar_autograd.cpp) contains the scalar reverse-mode
 automatic differentiation engine introduced in Episode 7. It supports:
@@ -326,25 +331,39 @@ episode are included as `relu.png` and `tanh.png`.
 [Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/dc29a21f43e32992f81958d94d3a506eb5d1ca36)
 · [Watch on YouTube](https://www.youtube.com/watch?v=yonurmbDkbM)
 
-### Episode 14: Residual connections and debugging gradients (work in progress)
+### Episode 14: Residual connections and debugging gradients
 
 We stack sixteen hidden layers and look inside the network. Each layer reports
 the size of its output and the size of its gradient, which shows the gradient
 shrinking as it travels back through plain layers. A `Residual` layer adds its
 input to the output of the layer it wraps, so a gradient has a path that does
 not shrink. We also see what happens when the learning rate is too large for
-the new network. There is no code checkpoint or video for this episode yet.
+the new network. The checkpoint's example stacks sixteen hidden layers with
+residual connections, trains for 20 epochs at a starting rate of 0.08 with decay
+0.95, and reached 92.85% (1857/2000) in one run.
+
+[Code checkpoint](https://github.com/mechanical-turk/deep-learning-all-the-way-down/commit/47db7ed)
+· [Watch on YouTube](https://www.youtube.com/watch?v=YZnfcbwwOdI)
+
+### Episode 15: Momentum and Adam optimizers (work in progress)
+
+Plain gradient descent uses only the current gradient. We add momentum, which
+keeps a running velocity so steady gradients build up, and read the loss and
+gradient traces to choose the learning rate. We then build Adam from a copy of
+the momentum step: a per-weight step size from a running average of squared
+gradients, and a bias correction that uses the step count. Results depend on
+batch size and on how many epochs we train, so the comparisons state both.
+There is no code checkpoint or public video for this episode yet.
 
 ## Direction
 
 We can now stack neural network layers, add residual connections, and train
-them on MNIST. Next, we plan to train on more data and work on optimizers,
-including momentum and velocity, and Adam. These are planned additions, not
-features in the current code.
+them on MNIST with gradient descent, momentum, or Adam. Next, we plan to train
+on more data and compare optimizers over longer runs.
 
 Attention, transformers, systems profiling, GPU execution, and custom CUDA
 kernels remain longer-term goals. Splitting the code into a library and adding
-CMake and a unit-testing framework remain future cleanup work, not Episode 14.
+CMake and a unit-testing framework remain future cleanup work, not Episode 15.
 
 We will redesign the implementation when a new capability exposes a weakness
 in the current representation. Those redesigns are part of the material.

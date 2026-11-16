@@ -998,6 +998,59 @@ void gradient_step(
   }
 }
 
+void momentum_step(
+  std::vector<Tensor>& parameters,
+  std::vector<std::vector<double>>& velocities,
+  double learning_rate,
+  double momentum
+) {
+  for (std::size_t slot = 0; slot < parameters.size(); ++slot) {
+    Tensor& parameter = parameters[slot];
+    for (std::size_t index = 0; index < parameter.numel(); ++index) {
+      const double retained_velocity = momentum * velocities[slot][index];
+      velocities[slot][index] = retained_velocity + parameter.grad()[index];
+      parameter.data()[index] -= learning_rate * velocities[slot][index];
+    }
+  }
+}
+
+void adam_step(
+  std::vector<Tensor>& parameters,
+  std::vector<std::vector<double>>& first_moments,
+  std::vector<std::vector<double>>& second_moments,
+  std::size_t step_count,
+  double learning_rate
+) {
+  const double beta1 = 0.9;
+  const double beta2 = 0.999;
+  const double epsilon = 1e-8;
+  const double correction1 = 1.0 - std::pow(beta1, static_cast<double>(step_count));
+  const double correction2 = 1.0 - std::pow(beta2, static_cast<double>(step_count));
+
+  for (std::size_t slot = 0; slot < parameters.size(); ++slot) {
+    Tensor& parameter = parameters[slot];
+    for (std::size_t index = 0; index < parameter.numel(); ++index) {
+
+      const double gradient = parameter.grad()[index];
+
+      first_moments[slot][index] = 
+        beta1 * first_moments[slot][index] + 
+        (1 - beta1) * gradient;
+
+      second_moments[slot][index] = 
+        beta2 * second_moments[slot][index] + 
+        (1 - beta2) * gradient * gradient;
+
+      const double division_term = 
+        std::sqrt(second_moments[slot][index] / correction2) + epsilon;
+
+      parameter.data()[index] -= learning_rate 
+        * first_moments[slot][index] / correction1
+        / division_term;
+    }
+  }
+}
+
 void train_linear_regression(
   const Tensor& inputs,
   const Tensor& targets,
@@ -1223,27 +1276,25 @@ void train_mnist() {
 
     MnistBatch sample = preview.read_batch(1);
 
-    // 28 x 28 = 784
-
     const Tensor image(
       {1, 784}, 
       std::move(sample.pixels)
     );
 
     std::mt19937 random(42);
-    // MLP model(784, 32, 10, random);
 
     Sequence model;
 
 
-    model.push_back(hidden_layer(784, 32, random));
+    model.push_back(hidden_layer<ReLU>(784, 256, random));
+    model.push_back(Linear(256, 10, random));
 
-    const int NUM_HIDDEN_LAYERS = 15;
-    for (int i = 0; i < NUM_HIDDEN_LAYERS; ++i) {
-      model.push_back(Residual(hidden_layer(32, 32, random)));
-    }
+    // const int NUM_HIDDEN_LAYERS = 15;
+    // for (int i = 0; i < NUM_HIDDEN_LAYERS; ++i) {
+    //   model.push_back(Residual(hidden_layer(32, 32, random)));
+    // }
 
-    model.push_back(Linear(32, 10, random));
+    // model.push_back(Linear(32, 10, random));
 
     const Tensor scores = model.forward(image);
     const Tensor probabilities = softmax(scores);
@@ -1260,11 +1311,22 @@ void train_mnist() {
 
     std::vector<Tensor> parameters = model.parameters();
 
-    const std::size_t EPOCHS = 20;
-    const double INITIAL_LEARNING_RATE = 0.08;
-    const double DECAY_RATE = 0.95;
-
+    const std::string OPTIMIZER = "momentum";
+    const double INITIAL_LEARNING_RATE = 0.1;
+    const std::size_t BATCH_SIZE = 64;
+    const std::size_t EPOCHS = 5;
     double learning_rate = INITIAL_LEARNING_RATE;
+    const double MOMENTUM = 0.9;
+    std::vector<std::vector<double>> velocities;
+    std::vector<std::vector<double>> first_moments;
+    std::vector<std::vector<double>> second_moments;
+    std::size_t step_count = 0;
+
+    for (const Tensor& parameter: parameters) {
+      velocities.emplace_back(parameter.numel(), 0.0);
+      first_moments.emplace_back(parameter.numel(), 0.0);
+      second_moments.emplace_back(parameter.numel(), 0.0);
+    }
 
     for(std::size_t epoch = 0; epoch < EPOCHS; ++epoch) {
       std::cout << "Training epoch: " << epoch + 1 << "/" << EPOCHS << "\n";
@@ -1277,7 +1339,7 @@ void train_mnist() {
 
       while (seen < 10000) {
         MnistBatch batch = training.read_batch(
-          std::min<std::size_t>(64, 10000 - seen)
+          std::min<std::size_t>(BATCH_SIZE, 10000 - seen)
         );
         const Tensor inputs(
           {batch.labels.size(), 784},
@@ -1291,18 +1353,33 @@ void train_mnist() {
         const Tensor probabilities = softmax(logits);
         Tensor loss = cross_entropy_loss(probabilities, batch.labels);
         loss.backward();
+
         if (epoch == 0 && seen == 0) {
           print_trace(trace);
         }
-        gradient_step(parameters, learning_rate);
+
+        if (OPTIMIZER == "sgd") {
+          gradient_step(parameters, learning_rate);
+        } else if (OPTIMIZER == "momentum") {
+          momentum_step(parameters, velocities, learning_rate, MOMENTUM);
+        } else if (OPTIMIZER == "adam") {
+          ++step_count;
+          adam_step(
+            parameters, 
+            first_moments, 
+            second_moments, 
+            step_count,
+            learning_rate
+          );
+        } else {
+          throw std::invalid_argument("unknown optimizer: " + OPTIMIZER);
+        }
 
         total_loss += loss.at({}) * batch.labels.size();
         seen += batch.labels.size();
       }
 
       std::cout << "Epoch " << epoch + 1 << " loss: " << total_loss / seen << "\n\n";
-
-      learning_rate *= DECAY_RATE;
     }
 
     MnistReader test(
@@ -1335,7 +1412,7 @@ void train_mnist() {
 
 }
 
-int main() {
+void test() {
 
   std::vector<std::size_t> shape_1 {2, 3};
   std::vector<double> data_1 {0,1,2,3,4,5};
@@ -1657,8 +1734,107 @@ int main() {
 
   // train_xor();
 
-  train_mnist();
 
   std::cout << "Success!\n";
+}
+
+int main() {
+  train_mnist();
   return 0;
 }
+
+
+// SGD at 
+//     const std::string OPTIMIZER = "sgd";
+//     const double INITIAL_LEARNING_RATE = 1.0;
+//     const std::size_t BATCH_SIZE = 250;
+//     const std::size_t EPOCHS = 5;
+//     double learning_rate = INITIAL_LEARNING_RATE;
+// test accuracy: 91%
+
+// end:
+// layer  1  Sequence[Linear, ReLU]            signal 4.8e-01  gradient 1.4e-04
+// layer  2  Linear                            signal 3.8e+00  gradient 3.0e-04
+
+
+
+// MOMENTUM v1 at:
+
+//     const std::string OPTIMIZER = "momentum";
+//     const double INITIAL_LEARNING_RATE = 1.0;
+//     const std::size_t BATCH_SIZE = 250;
+//     const std::size_t EPOCHS = 5;
+//     double learning_rate = INITIAL_LEARNING_RATE;
+//     const double MOMENTUM = 0.9;
+// test accuracy: 82.1%
+
+// end:
+// layer  1  Sequence[Linear, ReLU]            signal 7.5e-01  gradient 2.4e-03
+// layer  2  Linear                            signal 1.1e+01  gradient 4.5e-04
+
+// gradient = 1
+// velocity = 1
+// 0.9 * 1 + 1   = 1.9
+// 0.9 * 1.9 + 1 = 2.71
+// 0.9 ..    
+// 0.9           = 10
+// 0.9 * 10 + 1  = 10
+
+// MOMENTUM v2 at:
+
+//     const std::string OPTIMIZER = "momentum";
+//     const double INITIAL_LEARNING_RATE = 0.1;
+//     const std::size_t BATCH_SIZE = 250;
+//     const std::size_t EPOCHS = 5;
+//     double learning_rate = INITIAL_LEARNING_RATE;
+//     const double MOMENTUM = 0.9;
+
+// end:
+// layer  1  Sequence[Linear, ReLU]            signal 5.9e-01  gradient 1.4e-04
+// layer  2  Linear                            signal 4.8e+00  gradient 3.3e-04
+// Epoch 5 loss: 0.171738
+
+// Test accuracy: 91.6% (1832/2000)
+
+// Momentum V3 @ 0.178
+// layer  1  Sequence[Linear, ReLU]            signal 6.0e-01  gradient 1.5e-04
+// layer  2  Linear                            signal 5.6e+00  gradient 2.7e-04
+// Epoch 5 loss: 0.111156
+
+// Test accuracy: 93.05% (1861/2000)
+
+// Momentum V4 @ 0.316
+// layer  1  Sequence[Linear, ReLU]            signal 6.4e-01  gradient 1.5e-04
+// layer  2  Linear                            signal 6.8e+00  gradient 2.1e-04
+// Epoch 5 loss: 0.0768752
+
+// Test accuracy: 93.75% (1875/2000)
+
+// 0.1
+// 0.178
+// 0.316
+// 0.562
+// 1.0
+
+// ADAM v1 @ 0.01
+
+// layer  1  Sequence[Linear, ReLU]            signal 1.4e+00  gradient 1.8e-04
+// layer  2  Linear                            signal 1.0e+01  gradient 2.2e-04
+// Epoch 5 loss: 0.134096
+
+// Test accuracy: 91.15% (1823/2000)
+
+
+
+
+// step                         1       2       3
+// first average                 0.1     0.19    0.271
+// second average               0.001   0.002   0.003
+// sqrt(second)                 0.0316  0.0447  0.0547
+// first / sqrt(second)          3.16    4.25    4.95
+
+// ADAM v2 @ 0.01 WITH step count
+
+// Epoch 5 loss: 0.0510026
+
+// Test accuracy: 93.65% (1873/2000)
